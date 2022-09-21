@@ -735,19 +735,19 @@ def analyse_stream(test_content, frame_rate_family):
 	file_sample_p_frames = 0
 	file_sample_b_frames = 0
 	
-	# Use mp4box to dump IsoMedia file box metadata for analysis
-	mp4box_cl = ['mp4box',
+	# Use MP4Box to dump IsoMedia file box metadata for analysis
+	MP4Box_cl = ['MP4Box',
 		str(Path(test_content.test_file_path+'\\1\\'+TS_INIT_SEGMENT_NAME)),
 		'-diso']
 		
-	mp4box_cl2 = ['mp4box',
+	MP4Box_cl2 = ['MP4Box',
 		str(Path(test_content.test_file_path+'\\1\\'+TS_FIRST_SEGMENT_NAME)),
 		'-init-seg', str(Path(test_content.test_file_path+'\\1\\'+TS_INIT_SEGMENT_NAME)),
 		'-diso']
 
-	print('Running mp4box to dump IsoMedia file box metadata from init and first segments to XML...')
-	subprocess.run(mp4box_cl)
-	subprocess.run(mp4box_cl2)
+	print('Running MP4Box to dump IsoMedia file box metadata from init and first segments to XML...')
+	subprocess.run(MP4Box_cl)
+	subprocess.run(MP4Box_cl2)
 
 	print('Checking IsoMedia file box XML data...')
 	mp4_frag_info = etree.parse(str(Path(test_content.test_file_path+'\\1\\'+TS_INIT_SEGMENT_NAME.split('.')[0]+TS_METADATA_POSTFIX)))
@@ -875,7 +875,7 @@ def analyse_stream(test_content, frame_rate_family):
 			if (test_content.parameter_sets_in_band_present[0] is test_content.parameter_sets_in_band_present[1]) \
 			else TestResult.FAIL
 	
-	# Remove log files created by ffmpeg and mp4box
+	# Remove log files created by ffmpeg and MP4Box
 	try:
 		os.remove(str(Path(str(tc_matrix.stem)+'_trace_headers_init_'+time_of_analysis+'.txt')))
 	except OSError as e:
@@ -896,13 +896,13 @@ def analyse_stream(test_content, frame_rate_family):
 
 
 if __name__ == "__main__":
-	# Check FFMPEG, FFPROBE and GPAC(mp4box) are installed
+	# Check FFMPEG, FFPROBE and GPAC(MP4Box) are installed
 	if which('ffmpeg') is None:
 		sys.exit("FFMPEG was not found, ensure FFMPEG is added to the system PATH or is in the same folder as this script.")
 	if which('ffprobe') is None:
 		sys.exit("FFMPEG was not found, ensure FFPROBE is added to the system PATH or is in the same folder as this script.")
-	if which('mp4box') is None:
-		sys.exit("mp4box was not found, ensure mp4box is added to the system PATH or is in the same folder as this script.")
+	if which('MP4Box') is None:
+		sys.exit("MP4Box was not found, ensure MP4Box is added to the system PATH or is in the same folder as this script.")
 	
 	# Basic argument handling
 	parser = argparse.ArgumentParser(description="WAVE Mezzanine Test Vector Content Options Validator.")
