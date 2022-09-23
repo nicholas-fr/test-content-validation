@@ -807,7 +807,10 @@ def analyse_stream(test_content, frame_rate_family):
 				if (test_content.cmaf_fragment_duration[0] == test_content.cmaf_fragment_duration[1]) \
 				else TestResult.FAIL
 		print('Fragment duration = '+str(test_content.cmaf_fragment_duration[1])+' seconds')
-		print('Number of fragments = '+str(int(eval(str(test_content.duration[1])+'/'+str(test_content.cmaf_fragment_duration[1])))))
+		if test_content.cmaf_fragment_duration[1] != 0:
+			print('Number of fragments = '+str(int(eval(str(test_content.duration[1])+'/'+str(test_content.cmaf_fragment_duration[1])))))
+		else:
+			print('Number of fragments = cannot be computed (cmaf_fragment_duration[1] equals 0)')
 	else:
 		test_content.cmaf_fragment_duration[2] = TestResult.NOT_TESTABLE
 	
