@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 import argparse
 import copy
@@ -17,6 +17,7 @@ from lxml import etree
 from pathlib import Path
 from shutil import which
 
+sep='/'
 
 class CmafInitConstraints(str, Enum):
 	SINGLE: str = 'single'
@@ -350,8 +351,8 @@ def check_and_analyse(test_content, tc_vectors_folder, frame_rate_family):
 		return
 	
 	for tc in test_content:
-		test_stream_dir = Path(str(str(tc_vectors_folder)+'\\'+tc.file_brand[0]+TS_LOCATION_SETS_POST)+'\\'
-							+ frame_rate_family+'\\'+'t'+tc.test_stream_id+'\\')
+		test_stream_dir = Path(str(str(tc_vectors_folder)+sep+tc.file_brand[0]+TS_LOCATION_SETS_POST)+sep
+							+ frame_rate_family+sep+'t'+tc.test_stream_id+sep)
 		if os.path.isdir(test_stream_dir):
 			print("Found test stream folder \""+str(test_stream_dir)+"\"...")
 			date_dirs = next(os.walk(str(test_stream_dir)))[1]
@@ -362,14 +363,14 @@ def check_and_analyse(test_content, tc_vectors_folder, frame_rate_family):
 				tc.test_file_path = 'release (YYYY-MM-DD) folder missing'
 				print('No test streams releases found for '+'t'+tc.test_stream_id+'.')
 				continue
-			test_stream_date_dir = Path(str(test_stream_dir)+'\\'+most_recent_date+'\\')
+			test_stream_date_dir = Path(str(test_stream_dir)+sep+most_recent_date+sep)
 			if os.path.isdir(test_stream_date_dir):
 				print(str(test_stream_date_dir)+' OK')
 			else:
 				tc.test_file_path = 'release (YYYY-MM-DD) folder missing'
 				print('Test stream folder \"'+str(test_stream_date_dir)+'\" does not exist.')
 				continue
-			test_stream_path = Path(str(test_stream_date_dir)+'\\'+TS_MPD_NAME)
+			test_stream_path = Path(str(test_stream_date_dir)+sep+TS_MPD_NAME)
 			if os.path.isfile(test_stream_path):
 				print(str(test_stream_path)+' OK')
 				tc.test_file_path = str(test_stream_path)
@@ -377,14 +378,14 @@ def check_and_analyse(test_content, tc_vectors_folder, frame_rate_family):
 				tc.test_file_path = TS_MPD_NAME+' file missing'
 				print(str(test_stream_path)+' does not exist.')
 				continue
-			test_stream_path = Path(str(test_stream_date_dir)+'\\1\\'+TS_INIT_SEGMENT_NAME)
+			test_stream_path = Path(str(test_stream_date_dir)+sep+'1'+sep+TS_INIT_SEGMENT_NAME)
 			if os.path.isfile(test_stream_path):
 				print(str(test_stream_path)+' OK')
 			else:
 				tc.test_file_path = TS_INIT_SEGMENT_NAME+' file missing'
 				print(str(test_stream_path)+' does not exist.')
 				continue
-			test_stream_path = Path(str(test_stream_date_dir)+'\\1\\'+TS_FIRST_SEGMENT_NAME)
+			test_stream_path = Path(str(test_stream_date_dir)+sep+'1'+sep+TS_FIRST_SEGMENT_NAME)
 			if os.path.isfile(test_stream_path):
 				print(str(test_stream_path)+" OK")
 				tc.test_file_path = str(test_stream_date_dir)
@@ -415,7 +416,7 @@ def analyse_stream(test_content, frame_rate_family):
 	
 	# Read initial properties using ffprobe: codec name, sample entry / FourCC, resolution
 	source_videoproperties = subprocess.check_output(
-		['ffprobe', '-i', str(Path(test_content.test_file_path+'\\1\\'+TS_INIT_SEGMENT_NAME)),
+		['ffprobe', '-i', str(Path(test_content.test_file_path+sep+'1'+sep+TS_INIT_SEGMENT_NAME)),
 		'-show_streams', '-select_streams', 'v', '-loglevel', '0', '-print_format', 'json'])
 	source_videoproperties_json = json.loads(source_videoproperties)
 	test_content.codec_name[1] = source_videoproperties_json['streams'][0]['codec_name']
@@ -451,7 +452,7 @@ def analyse_stream(test_content, frame_rate_family):
 	
 	# Read detailed properties using ffmpeg
 	ffmpeg_cl = ['ffmpeg',
-		'-i', str(Path(test_content.test_file_path+'\\'+TS_MPD_NAME)),
+		'-i', str(Path(test_content.test_file_path+sep+TS_MPD_NAME)),
 		'-c', 'copy',
 		'-bsf:v', 'trace_headers',
 		'-f', 'null', '-']
@@ -735,22 +736,22 @@ def analyse_stream(test_content, frame_rate_family):
 	file_sample_p_frames = 0
 	file_sample_b_frames = 0
 	
-	# Use mp4box to dump IsoMedia file box metadata for analysis
-	mp4box_cl = ['mp4box',
-		str(Path(test_content.test_file_path+'\\1\\'+TS_INIT_SEGMENT_NAME)),
+	# Use MP4Box to dump IsoMedia file box metadata for analysis
+	MP4Box_cl = ['MP4Box',
+		str(Path(test_content.test_file_path+sep+'1'+sep+TS_INIT_SEGMENT_NAME)),
 		'-diso']
 		
-	mp4box_cl2 = ['mp4box',
-		str(Path(test_content.test_file_path+'\\1\\'+TS_FIRST_SEGMENT_NAME)),
-		'-init-seg', str(Path(test_content.test_file_path+'\\1\\'+TS_INIT_SEGMENT_NAME)),
+	MP4Box_cl2 = ['MP4Box',
+		str(Path(test_content.test_file_path+sep+'1'+sep+TS_FIRST_SEGMENT_NAME)),
+		'-init-seg', str(Path(test_content.test_file_path+sep+'1'+sep+TS_INIT_SEGMENT_NAME)),
 		'-diso']
 
-	print('Running mp4box to dump IsoMedia file box metadata from init and first segments to XML...')
-	subprocess.run(mp4box_cl)
-	subprocess.run(mp4box_cl2)
+	print('Running MP4Box to dump IsoMedia file box metadata from init and first segments to XML...')
+	subprocess.run(MP4Box_cl)
+	subprocess.run(MP4Box_cl2)
 
 	print('Checking IsoMedia file box XML data...')
-	mp4_frag_info = etree.parse(str(Path(test_content.test_file_path+'\\1\\'+TS_INIT_SEGMENT_NAME.split('.')[0]+TS_METADATA_POSTFIX)))
+	mp4_frag_info = etree.parse(str(Path(test_content.test_file_path+sep+'1'+sep+TS_INIT_SEGMENT_NAME.split('.')[0]+TS_METADATA_POSTFIX)))
 	mp4_frag_info_root = mp4_frag_info.getroot()
 	
 	file_stream_brands += [element.get("MajorBrand") for element in mp4_frag_info_root.iter('{*}FileTypeBox')]
@@ -777,7 +778,7 @@ def analyse_stream(test_content, frame_rate_family):
 			else TestResult.FAIL
 	print('Parameter sets in CMAF header = '+str(test_content.parameter_sets_in_cmaf_header_present[1]))
 	
-	mp4_frag_info = etree.parse(str(Path(test_content.test_file_path+'\\1\\'+TS_FIRST_SEGMENT_NAME.split('.')[0]+TS_METADATA_POSTFIX)))
+	mp4_frag_info = etree.parse(str(Path(test_content.test_file_path+sep+'1'+sep+TS_FIRST_SEGMENT_NAME.split('.')[0]+TS_METADATA_POSTFIX)))
 	mp4_frag_info_root = mp4_frag_info.getroot()
 	file_samples_per_chunk = [element.get("SampleCount") for element in mp4_frag_info_root.iter('{*}TrackRunBox')]
 	print('Samples per chunk = '+file_samples_per_chunk[0])
@@ -806,13 +807,16 @@ def analyse_stream(test_content, frame_rate_family):
 				if (test_content.cmaf_fragment_duration[0] == test_content.cmaf_fragment_duration[1]) \
 				else TestResult.FAIL
 		print('Fragment duration = '+str(test_content.cmaf_fragment_duration[1])+' seconds')
-		print('Number of fragments = '+str(int(eval(str(test_content.duration[1])+'/'+str(test_content.cmaf_fragment_duration[1])))))
+		if test_content.cmaf_fragment_duration[1] != 0:
+			print('Number of fragments = '+str(int(eval(str(test_content.duration[1])+'/'+str(test_content.cmaf_fragment_duration[1])))))
+		else:
+			print('Number of fragments = cannot be computed (cmaf_fragment_duration[1] equals 0)')
 	else:
 		test_content.cmaf_fragment_duration[2] = TestResult.NOT_TESTABLE
 	
 	# Cursory check that all fragments are present
 	nb_fragment_files_found = 0
-	stream_folder_contents = os.listdir(str(Path(test_content.test_file_path+'\\1\\')))
+	stream_folder_contents = os.listdir(str(Path(test_content.test_file_path+sep+'1'+sep)))
 	for item in stream_folder_contents:
 		if item.endswith('.m4s'):
 			nb_fragment_files_found += 1
@@ -875,19 +879,19 @@ def analyse_stream(test_content, frame_rate_family):
 			if (test_content.parameter_sets_in_band_present[0] is test_content.parameter_sets_in_band_present[1]) \
 			else TestResult.FAIL
 	
-	# Remove log files created by ffmpeg and mp4box
+	# Remove log files created by ffmpeg and MP4Box
 	try:
 		os.remove(str(Path(str(tc_matrix.stem)+'_trace_headers_init_'+time_of_analysis+'.txt')))
 	except OSError as e:
 		if e.errno != errno.ENOENT:		# No such file or directory
 			raise
 	try:
-		os.remove(str(Path(test_content.test_file_path+'\\1\\'+TS_INIT_SEGMENT_NAME.split('.')[0]+TS_METADATA_POSTFIX)))
+		os.remove(str(Path(test_content.test_file_path+sep+'1'+sep+TS_INIT_SEGMENT_NAME.split('.')[0]+TS_METADATA_POSTFIX)))
 	except OSError as e:
 		if e.errno != errno.ENOENT:		# No such file or directory
 			raise
 	try:
-		os.remove(str(Path(test_content.test_file_path+'\\1\\'+TS_FIRST_SEGMENT_NAME.split('.')[0]+TS_METADATA_POSTFIX)))
+		os.remove(str(Path(test_content.test_file_path+sep+'1'+sep+TS_FIRST_SEGMENT_NAME.split('.')[0]+TS_METADATA_POSTFIX)))
 	except OSError as e:
 		if e.errno != errno.ENOENT:		# No such file or directory
 			raise
@@ -896,13 +900,13 @@ def analyse_stream(test_content, frame_rate_family):
 
 
 if __name__ == "__main__":
-	# Check FFMPEG, FFPROBE and GPAC(mp4box) are installed
+	# Check FFMPEG, FFPROBE and GPAC(MP4Box) are installed
 	if which('ffmpeg') is None:
 		sys.exit("FFMPEG was not found, ensure FFMPEG is added to the system PATH or is in the same folder as this script.")
 	if which('ffprobe') is None:
 		sys.exit("FFMPEG was not found, ensure FFPROBE is added to the system PATH or is in the same folder as this script.")
-	if which('mp4box') is None:
-		sys.exit("mp4box was not found, ensure mp4box is added to the system PATH or is in the same folder as this script.")
+	if which('MP4Box') is None:
+		sys.exit("MP4Box was not found, ensure MP4Box is added to the system PATH or is in the same folder as this script.")
 	
 	# Basic argument handling
 	parser = argparse.ArgumentParser(description="WAVE Mezzanine Test Vector Content Options Validator.")
