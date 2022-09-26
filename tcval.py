@@ -8,6 +8,7 @@ import json
 import os
 import subprocess
 import sys
+import urllib.request
 
 from datetime import datetime
 from decimal import *
@@ -17,7 +18,6 @@ from lxml import etree
 from pathlib import Path
 from shutil import which
 
-sep='/'
 
 class CmafInitConstraints(str, Enum):
 	SINGLE: str = 'single'
@@ -322,7 +322,8 @@ class TestContentFullEncoder(JSONEncoder):
 		return JSONEncoder.default(self, o)
 
 
-# Constants	
+# Constants
+sep = '/'
 TS_DEFINITION_ROW_OFFSET = 3  # Number of rows from 'Test stream' root to actual definition data
 TS_LOCATION_FRAME_RATES_50 = '12.5_25_50'
 TS_LOCATION_FRAME_RATES_59_94 = '14.985_29.97_59.94'
@@ -332,6 +333,10 @@ TS_MPD_NAME = 'stream.mpd'
 TS_INIT_SEGMENT_NAME = 'init.mp4'
 TS_FIRST_SEGMENT_NAME = '0.m4s'
 TS_METADATA_POSTFIX = '_info.xml'
+
+# Default codec test content matrix CSV file URLs
+MATRIX_AVC = 'https://docs.google.com/spreadsheets/d/1hxbqBdJEEdVIDEkpjZ8f5kvbat_9VGxwFP77AXA_0Ao/export?format=csv'
+MATRIX_AVC_FILENAME = 'avc_matrix.csv'
 
 # Dicts
 h264_profile = {'66': 'Baseline', '77': 'Main', '88': 'Extended', '100': 'High', '110': 'High 10'}
@@ -351,7 +356,7 @@ def check_and_analyse(test_content, tc_vectors_folder, frame_rate_family):
 		return
 	
 	for tc in test_content:
-		test_stream_dir = Path(str(str(tc_vectors_folder)+sep+tc.file_brand[0]+TS_LOCATION_SETS_POST)+sep
+		test_stream_dir = Path(str(tc_vectors_folder)+sep+tc.file_brand[0]+TS_LOCATION_SETS_POST+sep
 							+ frame_rate_family+sep+'t'+tc.test_stream_id+sep)
 		if os.path.isdir(test_stream_dir):
 			print("Found test stream folder \""+str(test_stream_dir)+"\"...")
@@ -729,6 +734,7 @@ def analyse_stream(test_content, frame_rate_family):
 	# Init variables for temp data from file
 	file_stream_brands = []
 	file_samples_per_chunk = []
+	file_chunks_per_fragment_mdat = 0
 	file_stream_i_frames = 0
 	file_stream_p_frames = 0
 	file_stream_b_frames = 0
@@ -781,6 +787,7 @@ def analyse_stream(test_content, frame_rate_family):
 	mp4_frag_info = etree.parse(str(Path(test_content.test_file_path+sep+'1'+sep+TS_FIRST_SEGMENT_NAME.split('.')[0]+TS_METADATA_POSTFIX)))
 	mp4_frag_info_root = mp4_frag_info.getroot()
 	file_samples_per_chunk = [element.get("SampleCount") for element in mp4_frag_info_root.iter('{*}TrackRunBox')]
+	file_chunks_per_fragment_mdat = sum(1 for element in mp4_frag_info_root.iter('{*}MediaDataBox'))
 	print('Samples per chunk = '+file_samples_per_chunk[0])
 	file_chunks_per_fragment = len(file_samples_per_chunk)
 	if file_chunks_per_fragment > 1:
@@ -794,9 +801,10 @@ def analyse_stream(test_content, frame_rate_family):
 		test_content.chunks_per_fragment[2] = TestResult.UNKNOWN
 	else:
 		test_content.chunks_per_fragment[2] = TestResult.PASS \
-			if (test_content.chunks_per_fragment[0] is test_content.chunks_per_fragment[1]) \
+			if (test_content.chunks_per_fragment[0] is test_content.chunks_per_fragment[1]
+				and file_chunks_per_fragment == file_chunks_per_fragment_mdat) \
 			else TestResult.FAIL
-	print('Chunks per fragment = '+str(test_content.chunks_per_fragment[1].value)+' ('+str(file_chunks_per_fragment)+')')
+	print('Chunks per fragment = moof='+str(file_chunks_per_fragment)+' mdat='+str(file_chunks_per_fragment_mdat)+' ('+str(test_content.chunks_per_fragment[1].value)+')')
 	
 	if file_frame_rate != '':
 		test_content.cmaf_fragment_duration[1] = int(eval(file_samples_per_chunk[0]+'*'+str(file_chunks_per_fragment)+'/'+str(file_frame_rate)))
@@ -913,19 +921,29 @@ if __name__ == "__main__":
 	
 	parser.add_argument(
 		'-m', '--matrix',
-		required=True,
-		help="Specifies a CSV or Excel file that contains the test content matrix, with the expected content options for each test stream.")
+		required=False,
+		help="Specifies a CSV or Excel file that contains the test content matrix, "
+			"with the expected content options for each test stream. "
+			"(Default: downloads latest matrix CSV for AVC from Google Docs here: "+MATRIX_AVC+").")
 		
 	parser.add_argument(
 		'-v', '--vectors',
 		required=True,
-		help="Folder containing the test vectors to validate.")
+		help="Folder with the sets of test vectors for a specific codec e.g. \"avc_sets\", "
+			"that contains the subfolders for each frame rate family e.g. \"15_30_60\", "
+			"that each contain the subfolders t1 .. tN with the test vectors to validate. "
+			"Example of path to test vector MPD: <vectors>/15_30_60/t1/2022-09-23/stream.mpd")
 		
 	args = parser.parse_args()
 	
 	tc_matrix = ''
 	if args.matrix is not None:
 		tc_matrix = Path(args.matrix)
+	else:
+		http_request = urllib.request.Request(url=MATRIX_AVC, unverifiable=True)
+		req_file = urllib.request.urlopen(http_request, timeout=10)
+		tc_matrix = Path(MATRIX_AVC_FILENAME)
+		tc_matrix_file = open(str(tc_matrix), 'wb').write(req_file.read())
 	
 	tc_vectors_folder = ''
 	if args.vectors is not None:
@@ -943,10 +961,11 @@ if __name__ == "__main__":
 	
 	# Read CSV matrix to determine expected streams/values
 	tc_matrix_data = []
-	with open(tc_matrix, mode ='r') as csv_file:
+	with open(tc_matrix, mode='r') as csv_file:
 		csv_data = csv.reader(csv_file)
 		for row in csv_data:
 			tc_matrix_data.append(row)
+	csv_file.close()
 	
 	tc_matrix_ts_start = 0
 	tc_matrix_ts_root = [0, 0]
@@ -1022,7 +1041,7 @@ if __name__ == "__main__":
 			(lambda x: float(tc_matrix_data[tc_matrix_ts_root[0]+TS_DEFINITION_ROW_OFFSET+7][tc_matrix_ts_root[1]+i])
 				if x.replace(".", "", 1).isdigit() else 0)(tc_matrix_data[tc_matrix_ts_root[0]+TS_DEFINITION_ROW_OFFSET+7][tc_matrix_ts_root[1]+i]),  # frame_rate
 			(lambda x: int(tc_matrix_data[tc_matrix_ts_root[0]+TS_DEFINITION_ROW_OFFSET+8][tc_matrix_ts_root[1]+i])
-				if x.isdigit() else 0)(tc_matrix_data[tc_matrix_ts_root[0]+TS_DEFINITION_ROW_OFFSET+8][tc_matrix_ts_root[1]+i]),  # bitrate in kb/s
+				if x.isdigit() else 0)(tc_matrix_data[tc_matrix_ts_root[0]+TS_DEFINITION_ROW_OFFSET+8][tc_matrix_ts_root[1]+i]),  # bit rate in kb/s
 			(lambda x: int(tc_matrix_data[tc_matrix_ts_root[0]+TS_DEFINITION_ROW_OFFSET+9][tc_matrix_ts_root[1]+i][:-1])
 				if x.isdigit() else 0)(tc_matrix_data[tc_matrix_ts_root[0]+TS_DEFINITION_ROW_OFFSET+9][tc_matrix_ts_root[1]+i][:-1]),  # duration in s
 			)
