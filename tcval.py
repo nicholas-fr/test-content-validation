@@ -35,6 +35,7 @@ class TestResult(str, Enum):
 	FAIL: str = 'fail'
 	NOT_TESTABLE: str = 'not testable'
 	NOT_TESTED: str = 'not tested'
+	NOT_APPLICABLE: str = 'not applicable'
 	UNKNOWN: str = 'unknown'
 
 
@@ -76,7 +77,7 @@ class TestContent:
 	picture_timing_sei_present = ['', '', TestResult.NOT_TESTED]
 	vui_timing_present = ['', '', TestResult.NOT_TESTED]
 	cmaf_fragment_duration = [0, 0, TestResult.NOT_TESTED]
-	cmaf_initialisation_constraints = ['', '', TestResult.NOT_TESTED]
+	cmaf_initialisation_constraints = ['', '', TestResult.NOT_TESTABLE]
 	chunks_per_fragment = [0, 0, TestResult.NOT_TESTED]
 	b_frames_present = ['', '', TestResult.NOT_TESTED]
 	resolution = [VideoResolution(), VideoResolution(), TestResult.NOT_TESTED]
@@ -117,7 +118,7 @@ class TestContent:
 		if cmaf_fragment_duration is not None:
 			self.cmaf_fragment_duration = [cmaf_fragment_duration, 0, TestResult.NOT_TESTED]
 		if cmaf_initialisation_constraints is not None:
-			self.cmaf_initialisation_constraints = [cmaf_initialisation_constraints, '', TestResult.NOT_TESTED]
+			self.cmaf_initialisation_constraints = [cmaf_initialisation_constraints, '', TestResult.NOT_TESTABLE]
 		if chunks_per_fragment is not None:
 			self.chunks_per_fragment = [chunks_per_fragment, 0, TestResult.NOT_TESTED]
 		if b_frames_present is not None:
@@ -130,7 +131,7 @@ class TestContent:
 			self.bitrate = [bitrate, 0, TestResult.NOT_TESTED]
 		if duration is not None:
 			self.duration = [duration, 0, TestResult.NOT_TESTED]
-
+	
 	def json_def(self):
 		return {
 			'test_stream_id': self.test_stream_id,
@@ -336,7 +337,7 @@ TS_METADATA_POSTFIX = '_info.xml'
 
 # Default codec test content matrix CSV file URLs
 MATRIX_AVC = 'https://docs.google.com/spreadsheets/d/1hxbqBdJEEdVIDEkpjZ8f5kvbat_9VGxwFP77AXA_0Ao/export?format=csv'
-MATRIX_AVC_FILENAME = 'avc_matrix.csv'
+MATRIX_AVC_FILENAME = 'matrix_avc.csv'
 
 # Dicts
 h264_profile = {'66': 'Baseline', '77': 'Main', '88': 'Extended', '100': 'High', '110': 'High 10'}
@@ -350,8 +351,21 @@ frame_rate_group = {12.5: 0.25, 14.985: 0.25, 15: 0.25,
 					25: 0.5, 29.97: 0.5, 30: 0.5,
 					50: 1, 59.94: 1, 60: 1, 100: 2, 119.88: 2, 120: 2}
 
+# Test results
+TS_RESULTS_TOTAL_PASS = 0
+TS_RESULTS_TOTAL_FAIL = 0
+TS_RESULTS_TOTAL_NOT_TESTABLE = 0
+TS_RESULTS_TOTAL_NOT_TESTED = 0
+TS_RESULTS_TOTAL_NOT_APPLICABLE = 0
+
 
 def check_and_analyse(test_content, tc_vectors_folder, frame_rate_family):
+	global TS_RESULTS_TOTAL_PASS
+	global TS_RESULTS_TOTAL_FAIL
+	global TS_RESULTS_TOTAL_NOT_TESTABLE
+	global TS_RESULTS_TOTAL_NOT_TESTED
+	global TS_RESULTS_TOTAL_NOT_APPLICABLE
+	
 	if frame_rate_family not in [TS_LOCATION_FRAME_RATES_50, TS_LOCATION_FRAME_RATES_59_94, TS_LOCATION_FRAME_RATES_60]:
 		return
 	
@@ -367,6 +381,7 @@ def check_and_analyse(test_content, tc_vectors_folder, frame_rate_family):
 			else:
 				tc.test_file_path = 'release (YYYY-MM-DD) folder missing'
 				print('No test streams releases found for '+'t'+tc.test_stream_id+'.')
+				print()
 				continue
 			test_stream_date_dir = Path(str(test_stream_dir)+sep+most_recent_date+sep)
 			if os.path.isdir(test_stream_date_dir):
@@ -374,6 +389,7 @@ def check_and_analyse(test_content, tc_vectors_folder, frame_rate_family):
 			else:
 				tc.test_file_path = 'release (YYYY-MM-DD) folder missing'
 				print('Test stream folder \"'+str(test_stream_date_dir)+'\" does not exist.')
+				print()
 				continue
 			test_stream_path = Path(str(test_stream_date_dir)+sep+TS_MPD_NAME)
 			if os.path.isfile(test_stream_path):
@@ -382,6 +398,7 @@ def check_and_analyse(test_content, tc_vectors_folder, frame_rate_family):
 			else:
 				tc.test_file_path = TS_MPD_NAME+' file missing'
 				print(str(test_stream_path)+' does not exist.')
+				print()
 				continue
 			test_stream_path = Path(str(test_stream_date_dir)+sep+'1'+sep+TS_INIT_SEGMENT_NAME)
 			if os.path.isfile(test_stream_path):
@@ -389,6 +406,7 @@ def check_and_analyse(test_content, tc_vectors_folder, frame_rate_family):
 			else:
 				tc.test_file_path = TS_INIT_SEGMENT_NAME+' file missing'
 				print(str(test_stream_path)+' does not exist.')
+				print()
 				continue
 			test_stream_path = Path(str(test_stream_date_dir)+sep+'1'+sep+TS_FIRST_SEGMENT_NAME)
 			if os.path.isfile(test_stream_path):
@@ -397,19 +415,47 @@ def check_and_analyse(test_content, tc_vectors_folder, frame_rate_family):
 			else:
 				tc.test_file_path = TS_FIRST_SEGMENT_NAME+' file missing'
 				print(str(test_stream_path)+' does not exist.')
+				print()
 				continue
 			# Necessary files are present, run analysis
 			analyse_stream(tc, frame_rate_family)
 		else:
 			tc.test_file_path = 'folder missing'
 			print('Test stream folder \"'+str(test_stream_dir)+'\" does not exist.')
+			print()
 		
+		# Count results
+		for a, v in tc.__dict__.items():
+			if len(v) == 3:
+				if v[2] == TestResult.PASS:
+					TS_RESULTS_TOTAL_PASS += 1
+	
+				elif v[2] == TestResult.FAIL:
+					TS_RESULTS_TOTAL_FAIL += 1
+	
+				elif v[2] == TestResult.NOT_TESTED:
+					TS_RESULTS_TOTAL_NOT_TESTED += 1
+	
+				elif v[2] == TestResult.NOT_TESTABLE:
+					TS_RESULTS_TOTAL_NOT_TESTABLE += 1
+	
+				elif v[2] == TestResult.NOT_APPLICABLE:
+					TS_RESULTS_TOTAL_NOT_APPLICABLE += 1
+	
 	# Save metadata to JSON file
 	tc_res_filepath = Path(str(tc_matrix.stem)+'_'+frame_rate_family+'_test_results_'+time_of_analysis+'.json')
 	tc_res_file = open(str(tc_res_filepath), "w")
 	for tc in test_content:
 		json.dump(tc, tc_res_file, indent=4, cls=TestContentFullEncoder)
 	tc_res_file.close()
+	
+	print("## Summary of test results:")
+	print("#  - Total Pass: "+str(TS_RESULTS_TOTAL_PASS))
+	print("#  - Total Fail: "+str(TS_RESULTS_TOTAL_FAIL))
+	print("#  - Total Not Tested: "+str(TS_RESULTS_TOTAL_NOT_TESTED))
+	print("#  - Total Not Testable: "+str(TS_RESULTS_TOTAL_NOT_TESTABLE))
+	print("#  - Total Not Applicable: "+str(TS_RESULTS_TOTAL_NOT_APPLICABLE))
+	print()
 
 	print("Test results stored in: "+str(tc_res_filepath))
 	print()
@@ -484,6 +530,7 @@ def analyse_stream(test_content, frame_rate_family):
 	file_pps_count = 0
 	vui_detected = False
 	sei_detected = False
+	pic_timing_sei_detected = False
 	last_nal_unit_type = 0
 	nal_slice_types = []
 
@@ -491,8 +538,12 @@ def analyse_stream(test_content, frame_rate_family):
 	headers_trace_file = open(str(Path(str(tc_matrix.stem)+'_trace_headers_init_'+time_of_analysis+'.txt')), encoding="utf-8")
 	headers_trace = headers_trace_file.readlines()
 	print('Checking ffmpeg trace_headers log...')
-	for line in headers_trace:
+	nb_lines = len(headers_trace)
+	for n, line in enumerate(headers_trace):
 		if h264_detected:
+			# Tier is not applicable
+			test_content.codec_tier[2] = TestResult.NOT_APPLICABLE
+			
 			if sps_detected and not sps_processed:
 				if line.__contains__(' profile_idc '):
 					file_codec_profile = line.split(' = ')[1][:-1]
@@ -532,6 +583,16 @@ def analyse_stream(test_content, frame_rate_family):
 								if (test_content.vui_timing_present[0] is test_content.vui_timing_present[1]) \
 								else TestResult.FAIL
 						continue
+					if line.__contains__(' timing_info_present_flag ') and line.endswith('= 0\n'):
+						test_content.vui_timing_present[1] = False
+						if test_content.vui_timing_present[0] == '':
+							test_content.vui_timing_present[2] = TestResult.UNKNOWN
+						else:
+							test_content.vui_timing_present[2] = TestResult.PASS \
+								if (test_content.vui_timing_present[0] is test_content.vui_timing_present[1]) \
+								else TestResult.FAIL
+						sps_processed = True
+						continue
 						
 					if test_content.vui_timing_present[1] and line.__contains__(' num_units_in_tick '):
 						file_vui_timing_num_units_in_tick = int(line.split(' = ')[1])
@@ -539,41 +600,38 @@ def analyse_stream(test_content, frame_rate_family):
 					if test_content.vui_timing_present[1] and line.__contains__(' time_scale '):
 						file_vui_timing_time_scale = int(line.split(' = ')[1])
 						print('VUI timing present')
-						file_frame_rate = float(Decimal(file_vui_timing_time_scale/file_vui_timing_num_units_in_tick/2).quantize(Decimal('.001'), rounding=ROUND_DOWN))
-						test_content.frame_rate[1] = frame_rate_group.get(file_frame_rate, 0)
+						vui_file_frame_rate = float(Decimal(file_vui_timing_time_scale/file_vui_timing_num_units_in_tick/2).quantize(Decimal('.001'), rounding=ROUND_DOWN))
+						test_content.frame_rate[1] = \
+							frame_rate_group.get(vui_file_frame_rate,
+								'invalid VUI timing data (fps='+str(vui_file_frame_rate)+') | ffmpeg detected frame rate = ' + str(file_frame_rate)+'('+str(frame_rate_group.get(file_frame_rate,'?'))+')')
 						if test_content.frame_rate[0] == 0:
 							test_content.frame_rate[2] = TestResult.UNKNOWN
 						else:
 							test_content.frame_rate[2] = TestResult.PASS \
 								if (test_content.frame_rate[0] == test_content.frame_rate[1]) \
 								else TestResult.FAIL
-						print('Frame rate = '+str(file_frame_rate))
-						continue
-						
-					if line.__contains__(' pic_struct_present_flag ') and line.endswith('= 1\n'):
-						test_content.picture_timing_sei_present[1] = True
-						if test_content.picture_timing_sei_present[0] == '':
-							test_content.picture_timing_sei_present[2] = TestResult.UNKNOWN
-						else:
-							test_content.picture_timing_sei_present[2] = TestResult.PASS \
-								if (test_content.picture_timing_sei_present[0] is test_content.picture_timing_sei_present[1]) \
-								else TestResult.FAIL
+						print('VUI frame rate = '+str(vui_file_frame_rate))
 						sps_processed = True
-						print('Picture timing SEI present according to VUI (pic_struct_present_flag=1)')
 						continue
-						
-					if line.__contains__(' pic_struct_present_flag ') and line.endswith('= 0\n'):
-						test_content.picture_timing_sei_present[1] = False
-						if test_content.picture_timing_sei_present[0] == '':
-							test_content.picture_timing_sei_present[2] = TestResult.UNKNOWN
-						else:
-							test_content.picture_timing_sei_present[2] = TestResult.PASS \
-								if (test_content.picture_timing_sei_present[0] is test_content.picture_timing_sei_present[1]) \
-								else TestResult.FAIL
-						sps_processed = True
-						print('Picture timing SEI NOT present according to VUI (pic_struct_present_flag=0)')
+			
+			if sei_detected:
+				if pic_timing_sei_detected:
+					if line.__contains__(' pic_struct '):
+						print('Picture timing SEI pic_struct='+(line.split(' = ')[1]))
 						continue
-				
+				elif line.startswith('[trace_headers') and line.endswith('] Picture Timing\n'):
+					pic_timing_sei_detected = True
+					print('Picture timing SEI present')
+					test_content.picture_timing_sei_present[1] = True
+					if test_content.picture_timing_sei_present[0] == '':
+						test_content.picture_timing_sei_present[2] = TestResult.UNKNOWN
+					else:
+						test_content.picture_timing_sei_present[2] = TestResult.PASS \
+							if (test_content.picture_timing_sei_present[0] is
+								test_content.picture_timing_sei_present[1]) \
+							else TestResult.FAIL
+					continue
+			
 			if line.__contains__(' nal_unit_type '):
 				last_nal_unit_type = int(line.split(' = ')[1][:-1])
 				continue
@@ -589,7 +647,7 @@ def analyse_stream(test_content, frame_rate_family):
 					file_pps_count += 1
 				elif line.endswith('] Supplemental Enhancement Information\n'):
 					sei_detected = True
-					
+		
 		elif h265_detected:
 			if sps_detected and not sps_processed:
 				if line.__contains__(' general_tier_flag '):
@@ -642,6 +700,16 @@ def analyse_stream(test_content, frame_rate_family):
 								if (test_content.vui_timing_present[0] is test_content.vui_timing_present[1]) \
 								else TestResult.FAIL
 						continue
+					if line.__contains__(' vui_timing_info_present_flag ') and line.endswith('= 0\n'):
+						test_content.vui_timing_present[1] = False
+						if test_content.vui_timing_present[0] == '':
+							test_content.vui_timing_present[2] = TestResult.UNKNOWN
+						else:
+							test_content.vui_timing_present[2] = TestResult.PASS \
+								if (test_content.vui_timing_present[0] is test_content.vui_timing_present[1]) \
+								else TestResult.FAIL
+						sps_processed = True
+						continue
 						
 					if test_content.vui_timing_present[1] and line.__contains__(' vui_num_units_in_tick '):
 						file_vui_timing_num_units_in_tick = int(line.split(' = ')[1])
@@ -649,41 +717,38 @@ def analyse_stream(test_content, frame_rate_family):
 					if test_content.vui_timing_present[1] and line.__contains__(' vui_time_scale '):
 						file_vui_timing_time_scale = int(line.split(' = ')[1])
 						print('VUI timing present')
-						file_frame_rate = float(Decimal(file_vui_timing_time_scale/file_vui_timing_num_units_in_tick).quantize(Decimal('.001'), rounding=ROUND_DOWN))
-						test_content.frame_rate[1] = frame_rate_group.get(file_frame_rate, 0)
+						vui_file_frame_rate = float(Decimal(file_vui_timing_time_scale/file_vui_timing_num_units_in_tick).quantize(Decimal('.001'), rounding=ROUND_DOWN))
+						test_content.frame_rate[1] = \
+							frame_rate_group.get(vui_file_frame_rate,
+								'invalid VUI timing data (fps='+str(vui_file_frame_rate)+') | ffmpeg detected frame rate = ' + str(file_frame_rate)+'('+str(frame_rate_group.get(file_frame_rate,'?'))+')')
 						if test_content.frame_rate[0] == 0:
 							test_content.frame_rate[2] = TestResult.UNKNOWN
 						else:
 							test_content.frame_rate[2] = TestResult.PASS \
 								if (test_content.frame_rate[0] == test_content.frame_rate[1]) \
 								else TestResult.FAIL
-						print('Frame rate = '+str(file_frame_rate))
-						continue
-						
-					if line.__contains__(' frame_field_info_present_flag ') and line.endswith('= 1\n'):
-						test_content.picture_timing_sei_present[1] = True
-						if test_content.picture_timing_sei_present[0] == '':
-							test_content.picture_timing_sei_present[2] = TestResult.UNKNOWN
-						else:
-							test_content.picture_timing_sei_present[2] = TestResult.PASS \
-								if (test_content.picture_timing_sei_present[0] is test_content.picture_timing_sei_present[1]) \
-								else TestResult.FAIL
+						print('VUI frame rate = '+str(vui_file_frame_rate))
 						sps_processed = True
-						print('Picture timing SEI present according to VUI (frame_field_info_present_flag=1)')
-						continue
-						
-					if line.__contains__(' frame_field_info_present_flag ') and line.endswith('= 0\n'):
-						test_content.picture_timing_sei_present[1] = False
-						if test_content.picture_timing_sei_present[0] == '':
-							test_content.picture_timing_sei_present[2] = TestResult.UNKNOWN
-						else:
-							test_content.picture_timing_sei_present[2] = TestResult.PASS \
-								if (test_content.picture_timing_sei_present[0] is test_content.picture_timing_sei_present[1]) \
-								else TestResult.FAIL
-						sps_processed = True
-						print('Picture timing SEI NOT present according to VUI (frame_field_info_present_flag=0)')
 						continue
 				
+			if sei_detected:
+				if pic_timing_sei_detected:
+					if line.__contains__(' pic_struct '):
+						print('Picture timing SEI pic_struct=' + (line.split(' = ')[1]))
+						continue
+				elif line.startswith('[trace_headers') and line.endswith('] Picture Timing\n'):
+					pic_timing_sei_detected = True
+					print('Picture timing SEI present')
+					test_content.picture_timing_sei_present[1] = True
+					if test_content.picture_timing_sei_present[0] == '':
+						test_content.picture_timing_sei_present[2] = TestResult.UNKNOWN
+					else:
+						test_content.picture_timing_sei_present[2] = TestResult.PASS \
+							if (test_content.picture_timing_sei_present[0] is
+								test_content.picture_timing_sei_present[1]) \
+							else TestResult.FAIL
+					continue
+			
 			elif line.startswith('[trace_headers'):
 				if line.endswith('] Sequence Parameter Set\n'):
 					file_sps_count += 1
@@ -694,24 +759,50 @@ def analyse_stream(test_content, frame_rate_family):
 					sei_detected = True
 				elif line.endswith('] Prefix Supplemental Enhancement Information\n'):
 					sei_detected = True
+		
+		if line.startswith('frame='):
+			if n == nb_lines-2:
+				# Update test results for SEI messages
+				if not pic_timing_sei_detected:
+					test_content.picture_timing_sei_present[1] = False
+					if test_content.picture_timing_sei_present[0] == '':
+						test_content.picture_timing_sei_present[2] = TestResult.UNKNOWN
+					else:
+						test_content.picture_timing_sei_present[2] = TestResult.PASS \
+							if (test_content.picture_timing_sei_present[0] is
+								test_content.picture_timing_sei_present[1]) \
+							else TestResult.FAIL
 				
-		if line.__contains__('Duration: '):
-			file_duration = line.split(',')[0].lstrip().split(' ')[1].split('.')[0]
-			file_duration_h, file_duration_m, file_duration_s = file_duration.split(':')
-			test_content.duration[1] = int(file_duration_h)*3600+int(file_duration_m)*60+int(file_duration_s)
-			if test_content.duration[0] == 0:
-				test_content.duration[2] = TestResult.UNKNOWN
-			else:
-				test_content.duration[2] = TestResult.PASS \
-					if (test_content.duration[0] == test_content.duration[1]) \
-					else TestResult.FAIL
-			print('Duration = '+str(test_content.duration[1])+'s')
+				# Check duration detected by ffmpeg based on total frames (as the time reported never matches total duration)
+				file_duration = round(eval(line.split('=')[1].lstrip().split(' ')[0]+'*1/'+str(file_frame_rate)), 3)
+				test_content.duration[1] = file_duration
+				if test_content.duration[0] == 0:
+					test_content.duration[2] = TestResult.UNKNOWN
+				else:
+					# Check duration matches target or is less than 1 frame lower than target duration (for fractional frame rates)
+					test_content.duration[2] = TestResult.PASS \
+						if (test_content.duration[0] >= test_content.duration[1] > (test_content.duration[1] - (1 / file_frame_rate))) \
+						else TestResult.FAIL
+				print('Duration = '+str(test_content.duration[1])+'s')
 			continue
 			
 		if not h264_detected and not h265_detected and line.__contains__('Stream #0:0'):
 			if line.__contains__('/s,'):
 				line_data_array = line[:line.find('kb/s,')].split(',')
-				if line.__contains__('fps'): file_frame_rate = float(line[line.find('kb/s,'):].split(',')[1][:-3])
+				if line.__contains__('fps'):
+					file_frame_rate = float(line[line.find('kb/s,'):].split(',')[1][:-3])
+				if file_frame_rate == 14.99:
+					file_frame_rate = 14.985  # Compensate for ffmpeg rounding fps
+				test_content.frame_rate[1] = \
+					frame_rate_group.get(file_frame_rate, 'ínvalid ffmpeg detected frame rate = ' + str(file_frame_rate))
+				if test_content.frame_rate[0] == 0:
+					test_content.frame_rate[2] = TestResult.UNKNOWN
+				else:
+					test_content.frame_rate[2] = TestResult.PASS \
+						if (test_content.frame_rate[0] == test_content.frame_rate[1]) \
+						else TestResult.FAIL
+				print('ffmpeg detected frame rate = ' + str(file_frame_rate))
+				
 				test_content.bitrate[1] = int(line_data_array[len(line_data_array)-1])
 				if test_content.bitrate[0] == 0:
 					test_content.bitrate[2] = TestResult.UNKNOWN
@@ -771,8 +862,8 @@ def analyse_stream(test_content, frame_rate_family):
 			else TestResult.FAIL
 	print('File brands = '+test_content.file_brand[1])
 	
-	if [element.get("content") for element in mp4_frag_info_root.iter('{*}SequenceParameterSet')][0] is None \
-		and [element.get("content") for element in mp4_frag_info_root.iter('{*}PictureParameterSet')][0] is None:
+	if len([element.get("content") for element in mp4_frag_info_root.iter('{*}SequenceParameterSet')]) == 0 \
+		and len([element.get("content") for element in mp4_frag_info_root.iter('{*}PictureParameterSet')]) == 0:
 		test_content.parameter_sets_in_cmaf_header_present[1] = False
 	else:
 		test_content.parameter_sets_in_cmaf_header_present[1] = True
@@ -807,7 +898,8 @@ def analyse_stream(test_content, frame_rate_family):
 	print('Chunks per fragment = moof='+str(file_chunks_per_fragment)+' mdat='+str(file_chunks_per_fragment_mdat)+' ('+str(test_content.chunks_per_fragment[1].value)+')')
 	
 	if file_frame_rate != '':
-		test_content.cmaf_fragment_duration[1] = int(eval(file_samples_per_chunk[0]+'*'+str(file_chunks_per_fragment)+'/'+str(file_frame_rate)))
+		test_content.cmaf_fragment_duration[1] = \
+			round(float(eval(file_samples_per_chunk[0]+'*'+str(file_chunks_per_fragment)+'/'+str(file_frame_rate))), 1)
 		if test_content.cmaf_fragment_duration[0] == 0:
 			test_content.cmaf_fragment_duration[2] = TestResult.UNKNOWN
 		else:
@@ -929,10 +1021,10 @@ if __name__ == "__main__":
 	parser.add_argument(
 		'-v', '--vectors',
 		required=True,
-		help="Folder with the sets of test vectors for a specific codec e.g. \"avc_sets\", "
-			"that contains the subfolders for each frame rate family e.g. \"15_30_60\", "
-			"that each contain the subfolders t1 .. tN with the test vectors to validate. "
-			"Example of path to test vector MPD: <vectors>/15_30_60/t1/2022-09-23/stream.mpd")
+		help="Folder containing subfolders with sets of test vectors for a specific codec e.g. \"cfhd_sets\", "
+			"that contain subfolders for each frame rate family e.g. \"15_30_60\", "
+			"that contain subfolders t1 .. tN with the test vectors to validate. "
+			"Example of path to test vector MPD: <vectors>/cfhd_sets/15_30_60/t1/2022-09-23/stream.mpd")
 		
 	args = parser.parse_args()
 	
