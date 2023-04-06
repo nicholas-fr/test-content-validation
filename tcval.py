@@ -480,9 +480,11 @@ h264_slice_type = {'0': 'P slice', '1': 'B slice', '2': 'I slice',
 				'8': 'SP slice', '9': 'SI slice'}
 h265_profile = {'1': 'Main', '2': 'Main 10'}
 h265_tier = {'0': 'Main', '1': 'High'}
-cmaf_brand_codecs = {'cfhd':'avc', 'chdf':'avc',
-					 'chh1':'hevc', 'cud1':'hevc', 'clg1':'hevc', 'chd1':'hevc', 'cdm1':'hevc', 'cdm4':'hevc',
-					 'av01':'av1', 'cvvc':'vvc'}  # As defined in CTA-5001-E
+# For codec_name ffmpeg uses the ISO/IEC MPEG naming convention except for AVC
+codec_names = {'h264': 'avc'}  # Convert codec_name using ITU-T naming convention to ISO/IEC MPEG naming convention
+cmaf_brand_codecs = {'cfhd': 'avc', 'chdf': 'avc',
+					'chh1': 'hevc', 'cud1': 'hevc', 'clg1': 'hevc', 'chd1': 'hevc', 'cdm1': 'hevc', 'cdm4': 'hevc',
+					'av01': 'av1', 'cvvc': 'vvc'}  # As defined in CTA-5001-E
 frame_rate_group = {12.5: 0.25, 14.985: 0.25, 15: 0.25,
 					25: 0.5, 29.97: 0.5, 30: 0.5,
 					50: 1, 59.94: 1, 60: 1, 100: 2, 119.88: 2, 120: 2}
@@ -873,7 +875,7 @@ def analyse_stream(test_content, frame_rate_family, debug_folder):
 		['ffprobe', '-i', str(Path(test_content.test_file_path+sep+'1'+sep+TS_INIT_SEGMENT_NAME)),
 		'-show_streams', '-select_streams', 'v', '-loglevel', '0', '-print_format', 'json'])
 	source_videoproperties_json = json.loads(source_videoproperties)
-	test_content.codec_name[1] = source_videoproperties_json['streams'][0]['codec_name']
+	test_content.codec_name[1] = codec_names.get(source_videoproperties_json['streams'][0]['codec_name'], source_videoproperties_json['streams'][0]['codec_name'])
 	if test_content.codec_name[0] == '':
 		test_content.codec_name[2] = TestResult.UNKNOWN
 	else:
