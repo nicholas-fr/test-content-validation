@@ -4,19 +4,25 @@ import argparse
 import copy
 import csv
 import errno
+import isodate
 import json
 import os
+import shutil
+import socket
+import string
 import subprocess
 import sys
+import time
 import urllib.request
+import zipfile
 
+from collections import Counter
 from datetime import datetime
 from decimal import *
 from enum import Enum
 from json import JSONEncoder
 from lxml import etree
 from pathlib import Path
-from shutil import which
 
 
 class CmafInitConstraints(str, Enum):
@@ -56,7 +62,7 @@ class VideoResolution:
 		}
 	# Use same JSON export for all TestContent json export functions
 	json_def = json_analysis = json_ref = json_full = json
-	
+
 
 # Arrays representing:
 #   - expected value (read from input test content matrix), 
@@ -66,6 +72,9 @@ class VideoResolution:
 class TestContent:
 	test_stream_id = ''
 	test_file_path = ''
+	mezzanine_version = ['', '', TestResult.NOT_TESTED]
+	mezzanine_format = ['', '', TestResult.NOT_TESTED]
+	conformance_test_result = ''
 	codec_name = ['', '', TestResult.NOT_TESTED]
 	codec_profile = ['', '', TestResult.NOT_TESTED]
 	codec_level = ['', '', TestResult.NOT_TESTED]
@@ -77,24 +86,33 @@ class TestContent:
 	picture_timing_sei_present = ['', '', TestResult.NOT_TESTED]
 	vui_timing_present = ['', '', TestResult.NOT_TESTED]
 	cmaf_fragment_duration = [0, 0, TestResult.NOT_TESTED]
-	cmaf_initialisation_constraints = ['', '', TestResult.NOT_TESTABLE]
+	cmaf_initialisation_constraints = ['', '', TestResult.NOT_TESTABLE]  # Not testable with current test content
 	chunks_per_fragment = [0, 0, TestResult.NOT_TESTED]
 	b_frames_present = ['', '', TestResult.NOT_TESTED]
 	resolution = [VideoResolution(), VideoResolution(), TestResult.NOT_TESTED]
 	frame_rate = [0.0, 0.0, TestResult.NOT_TESTED]
 	bitrate = [0, 0, TestResult.NOT_TESTED]
 	duration = [0, 0, TestResult.NOT_TESTED]
+	mpd_sample_duration_delta = [0.0, 0.0, TestResult.NOT_TESTED]
 	
-	def __init__(self, test_stream_id=None, test_file_path=None,
-				codec_name=None, codec_profile=None, codec_level=None, codec_tier=None, file_brand=None,
-				sample_entry_type=None,	parameter_sets_in_cmaf_header_present=None, parameter_sets_in_band_present=None,
-				picture_timing_sei_present=None, vui_timing_present=None,
+	
+	def __init__(self, test_stream_id=None, test_file_path=None, mezzanine_version=None, mezzanine_format=None,
+				conformance_test_result=None, codec_name=None, codec_profile=None, codec_level=None, codec_tier=None,
+				file_brand=None, sample_entry_type=None, parameter_sets_in_cmaf_header_present=None,
+				parameter_sets_in_band_present=None, picture_timing_sei_present=None, vui_timing_present=None,
 				cmaf_fragment_duration=None, cmaf_initialisation_constraints=None, chunks_per_fragment=None,
-				b_frames_present=None, resolution=None, frame_rate=None, bitrate=None, duration=None):
+				b_frames_present=None, resolution=None, frame_rate=None, bitrate=None, duration=None,
+				mpd_sample_duration_delta=None):
 		if test_stream_id is not None:
 			self.test_stream_id = test_stream_id
 		if test_file_path is not None:
 			self.test_file_path = test_file_path
+		if mezzanine_version is not None:
+			self.mezzanine_version = [mezzanine_version, '', TestResult.NOT_TESTED]
+		if mezzanine_format is not None:
+			self.mezzanine_format = [mezzanine_format, '', TestResult.NOT_TESTED]
+		if conformance_test_result is not None:
+			self.conformance_test_result = conformance_test_result
 		if codec_name is not None:
 			self.codec_name = [codec_name, '', TestResult.NOT_TESTED]
 		if codec_profile is not None:
@@ -131,11 +149,16 @@ class TestContent:
 			self.bitrate = [bitrate, 0, TestResult.NOT_TESTED]
 		if duration is not None:
 			self.duration = [duration, 0, TestResult.NOT_TESTED]
+		if mpd_sample_duration_delta is not None:
+			self.mpd_sample_duration_delta = [mpd_sample_duration_delta, 0.0, TestResult.NOT_TESTED]
 	
 	def json_def(self):
 		return {
 			'test_stream_id': self.test_stream_id,
 			'test_file_path': self.test_file_path,
+			'mezzanine_version': self.mezzanine_version[0],
+			'mezzanine_format': self.mezzanine_format[0],
+			'conformance_test_result': '',  # Only applicable for results
 			'codec_profile': self.codec_profile[0],
 			'codec_level': self.codec_level[0],
 			'codec_tier': self.codec_tier[0],
@@ -152,13 +175,17 @@ class TestContent:
 			'resolution': self.resolution[0],
 			'frame_rate': self.frame_rate[0],
 			'bitrate': self.bitrate[0],
-			'duration': self.duration[0]
+			'duration': self.duration[0],
+			'mpd_sample_duration_delta': self.mpd_sample_duration_delta[0]
 		}
 	
 	def json_analysis(self):
 		return {
 			'test_stream_id': self.test_stream_id,
 			'test_file_path': self.test_file_path,
+			'mezzanine_version': self.mezzanine_version[1],
+			'mezzanine_format': self.mezzanine_format[1],
+			'conformance_test_result': '',  # Only applicable for results
 			'codec_profile': self.codec_profile[1],
 			'codec_level': self.codec_level[1],
 			'codec_tier': self.codec_tier[1],
@@ -175,13 +202,17 @@ class TestContent:
 			'resolution': self.resolution[1],
 			'frame_rate': self.frame_rate[1],
 			'bitrate': self.bitrate[1],
-			'duration': self.duration[1]
+			'duration': self.duration[1],
+			'mpd_sample_duration_delta': self.mpd_sample_duration_delta[1]
 		}
 	
 	def json_res(self):
 		return {
 			'test_stream_id': self.test_stream_id,
 			'test_file_path': self.test_file_path,
+			'mezzanine_version': self.mezzanine_version[2],
+			'mezzanine_format': self.mezzanine_format[2],
+			'conformance_test_result': self.conformance_test_result,
 			'codec_profile': self.codec_profile[2],
 			'codec_level': self.codec_level[2],
 			'codec_tier': self.codec_tier[2],
@@ -198,7 +229,8 @@ class TestContent:
 			'resolution': self.resolution[2],
 			'frame_rate': self.frame_rate[2],
 			'bitrate': self.bitrate[2],
-			'duration': self.duration[2]
+			'duration': self.duration[2],
+			'mpd_sample_duration_delta': self.mpd_sample_duration_delta[2]
 		}
 		
 	def json_full(self):
@@ -206,6 +238,17 @@ class TestContent:
 			'TestStreamValidation': {
 				'test_stream_id': self.test_stream_id,
 				'test_file_path': self.test_file_path,
+				'mezzanine_version': {
+					'expected': self.mezzanine_version[0],
+					'detected': self.mezzanine_version[1],
+					'test_result': self.mezzanine_version[2].value
+					},
+				'mezzanine_format': {
+					'expected': self.mezzanine_format[0],
+					'detected': self.mezzanine_format[1],
+					'test_result': self.mezzanine_format[2].value
+					},
+				'conformance_test_result': self.conformance_test_result,
 				'codec_profile': {
 					'expected': self.codec_profile[0],
 					'detected': self.codec_profile[1],
@@ -290,6 +333,11 @@ class TestContent:
 					'expected': self.duration[0],
 					'detected': self.duration[1],
 					'test_result': self.duration[2].value
+					},
+				'mpd_sample_duration_delta': {
+					'expected': self.mpd_sample_duration_delta[0],
+					'detected': self.mpd_sample_duration_delta[1],
+					'test_result': self.mpd_sample_duration_delta[2].value
 					}
 			}
 		}
@@ -323,8 +371,92 @@ class TestContentFullEncoder(JSONEncoder):
 		return JSONEncoder.default(self, o)
 
 
+class SwitchingSetTestContent:
+	switching_set_id = ''
+	test_stream_ids = [[''], [''], [TestResult.NOT_TESTED]]
+	test_file_paths = [[''], [''], [TestResult.NOT_TESTED]]
+	mezzanine_version = ['', '', TestResult.NOT_TESTED]
+	conformance_test_result = ''
+	cmaf_initialisation_constraints = ['', '', TestResult.NOT_TESTED]
+
+	def __init__(self, switching_set_id=None, test_stream_ids=None, test_file_paths=None, mezzanine_version=None,
+				conformance_test_result=None, cmaf_initialisation_constraints=None):
+		if switching_set_id is not None:
+			self.switching_set_id = switching_set_id
+		if test_stream_ids is not None:
+			self.test_stream_ids = [test_stream_ids, [''] * len(test_stream_ids), [TestResult.NOT_TESTED] * len(test_stream_ids)]
+		if test_file_paths is not None:
+			self.test_file_paths = [test_file_paths, [''] * len(test_file_paths), [TestResult.NOT_TESTED] * len(test_file_paths)]
+		if mezzanine_version is not None:
+			self.mezzanine_version = [mezzanine_version, '', TestResult.NOT_TESTED]
+		if conformance_test_result is not None:
+			self.conformance_test_result = conformance_test_result
+		if cmaf_initialisation_constraints is not None:
+			self.cmaf_initialisation_constraints = [cmaf_initialisation_constraints, '', TestResult.NOT_TESTED]
+	
+	def json_def(self):
+		return {
+			'switching_set_id': self.switching_set_id,
+			'test_stream_ids': self.test_stream_ids[0],
+			'test_file_paths': self.test_file_paths[0],
+			'mezzanine_version': self.mezzanine_version[0],
+			'conformance_test_result': '',  # Only applicable for results
+			'cmaf_initialisation_constraints': self.cmaf_initialisation_constraints[0]
+		}
+	
+	def json_analysis(self):
+		return {
+			'switching_set_id': self.switching_set_id,
+			'test_stream_ids': self.test_stream_ids[1],
+			'test_file_paths': self.test_file_paths[1],
+			'mezzanine_version': self.mezzanine_version[1],
+			'conformance_test_result': '',  # Only applicable for results
+			'cmaf_initialisation_constraints': self.cmaf_initialisation_constraints[1]
+		}
+	
+	def json_res(self):
+		return {
+			'switching_set_id': self.switching_set_id,
+			'test_stream_ids': self.test_stream_ids[2],
+			'test_file_paths': self.test_file_paths[2],
+			'mezzanine_version': self.mezzanine_version[2],
+			'conformance_test_result': self.conformance_test_result,
+			'cmaf_initialisation_constraints': self.cmaf_initialisation_constraints[2]
+		}
+	
+	def json_full(self):
+		return {
+			'SwitchingSetValidation': {
+				'switching_set_id': self.switching_set_id,
+				'test_stream_ids': {
+					'expected': self.test_stream_ids[0],
+					'detected': self.test_stream_ids[1],
+					'test_result': self.test_stream_ids[2]
+				},
+				'test_file_paths': {
+					'expected': self.test_file_paths[0],
+					'detected': self.test_file_paths[1],
+					'test_result': self.test_file_paths[2]
+				},
+				'mezzanine_version': {
+					'expected': self.mezzanine_version[0],
+					'detected': self.mezzanine_version[1],
+					'test_result': self.mezzanine_version[2].value
+				},
+				'conformance_test_result': self.conformance_test_result,
+				'cmaf_initialisation_constraints': {
+					'expected': self.cmaf_initialisation_constraints[0],
+					'detected': self.cmaf_initialisation_constraints[1],
+					'test_result': self.cmaf_initialisation_constraints[2].value
+				}
+			}
+		}
+
+
 # Constants
 sep = '/'
+TS_START = 'Test stream'
+SS_START = '8.5 Switching Set Playback'
 TS_DEFINITION_ROW_OFFSET = 3  # Number of rows from 'Test stream' root to actual definition data
 TS_LOCATION_FRAME_RATES_50 = '12.5_25_50'
 TS_LOCATION_FRAME_RATES_59_94 = '14.985_29.97_59.94'
@@ -334,6 +466,7 @@ TS_MPD_NAME = 'stream.mpd'
 TS_INIT_SEGMENT_NAME = 'init.mp4'
 TS_FIRST_SEGMENT_NAME = '0.m4s'
 TS_METADATA_POSTFIX = '_info.xml'
+SS_NAME = 'ss1'  # For now there is only 1 switching set
 
 # Default codec test content matrix CSV file URLs
 MATRIX_AVC = 'https://docs.google.com/spreadsheets/d/1hxbqBdJEEdVIDEkpjZ8f5kvbat_9VGxwFP77AXA_0Ao/export?format=csv'
@@ -347,9 +480,15 @@ h264_slice_type = {'0': 'P slice', '1': 'B slice', '2': 'I slice',
 				'8': 'SP slice', '9': 'SI slice'}
 h265_profile = {'1': 'Main', '2': 'Main 10'}
 h265_tier = {'0': 'Main', '1': 'High'}
+cmaf_brand_codecs = {'cfhd':'avc', 'chdf':'avc',
+					 'chh1':'hevc', 'cud1':'hevc', 'clg1':'hevc', 'chd1':'hevc', 'cdm1':'hevc', 'cdm4':'hevc',
+					 'av01':'av1', 'cvvc':'vvc'}  # As defined in CTA-5001-E
 frame_rate_group = {12.5: 0.25, 14.985: 0.25, 15: 0.25,
 					25: 0.5, 29.97: 0.5, 30: 0.5,
 					50: 1, 59.94: 1, 60: 1, 100: 2, 119.88: 2, 120: 2}
+frame_rate_value_50 = {0.25: 12.5, 0.5: 25, 1: 50, 2: 100}
+frame_rate_value_59_94 = {0.25: 14.985, 0.5: 29.97, 1: 59.94, 2: 119.88}
+frame_rate_value_60 = {0.25: 15, 0.5: 30, 1: 60, 2: 120}
 
 # Test results
 TS_RESULTS_TOTAL_PASS = 0
@@ -357,14 +496,31 @@ TS_RESULTS_TOTAL_FAIL = 0
 TS_RESULTS_TOTAL_NOT_TESTABLE = 0
 TS_RESULTS_TOTAL_NOT_TESTED = 0
 TS_RESULTS_TOTAL_NOT_APPLICABLE = 0
+TS_CONFORMANCE_TOTAL_PASS = 0
+TS_CONFORMANCE_TOTAL_FAIL = 0
+TS_CONFORMANCE_TOTAL_UNKNOWN = 0
+
+# DASH conformance tool
+CONFORMANCE_TOOL_DOCKER_CONTAINER_ID = ''
+
+# HTTP server configuration
+DETECTED_IP = '127.0.0.1'
+PORT = 9090
+HTTPD_PATH = ''
+
+# Default parameter values
+mezzanine_version = 1
 
 
-def check_and_analyse(test_content, tc_vectors_folder, frame_rate_family):
+def check_and_analyse_v(test_content, tc_vectors_folder, frame_rate_family, debug_folder):
 	global TS_RESULTS_TOTAL_PASS
 	global TS_RESULTS_TOTAL_FAIL
 	global TS_RESULTS_TOTAL_NOT_TESTABLE
 	global TS_RESULTS_TOTAL_NOT_TESTED
 	global TS_RESULTS_TOTAL_NOT_APPLICABLE
+	global TS_CONFORMANCE_TOTAL_PASS
+	global TS_CONFORMANCE_TOTAL_FAIL
+	global TS_CONFORMANCE_TOTAL_UNKNOWN
 	
 	if frame_rate_family not in [TS_LOCATION_FRAME_RATES_50, TS_LOCATION_FRAME_RATES_59_94, TS_LOCATION_FRAME_RATES_60]:
 		return
@@ -372,6 +528,7 @@ def check_and_analyse(test_content, tc_vectors_folder, frame_rate_family):
 	for tc in test_content:
 		test_stream_dir = Path(str(tc_vectors_folder)+sep+tc.file_brand[0]+TS_LOCATION_SETS_POST+sep
 							+ frame_rate_family+sep+'t'+tc.test_stream_id+sep)
+		
 		if os.path.isdir(test_stream_dir):
 			print("Found test stream folder \""+str(test_stream_dir)+"\"...")
 			date_dirs = next(os.walk(str(test_stream_dir)))[1]
@@ -418,13 +575,22 @@ def check_and_analyse(test_content, tc_vectors_folder, frame_rate_family):
 				print()
 				continue
 			# Necessary files are present, run analysis
-			analyse_stream(tc, frame_rate_family)
+			analyse_stream(tc, frame_rate_family, debug_folder)
 		else:
 			tc.test_file_path = 'folder missing'
 			print('Test stream folder \"'+str(test_stream_dir)+'\" does not exist.')
 			print()
 		
 		# Count results
+		if tc.conformance_test_result != '':
+			if tc.conformance_test_result['verdict'] == 'PASS':
+				TS_CONFORMANCE_TOTAL_PASS += 1
+			elif tc.conformance_test_result['verdict'] == 'FAIL':
+				TS_CONFORMANCE_TOTAL_FAIL += 1
+			else:
+				TS_CONFORMANCE_TOTAL_UNKNOWN += 1
+		else:
+			TS_CONFORMANCE_TOTAL_UNKNOWN += 1
 		for a, v in tc.__dict__.items():
 			if len(v) == 3:
 				if v[2] == TestResult.PASS:
@@ -447,9 +613,18 @@ def check_and_analyse(test_content, tc_vectors_folder, frame_rate_family):
 	tc_res_file = open(str(tc_res_filepath), "w")
 	for tc in test_content:
 		json.dump(tc, tc_res_file, indent=4, cls=TestContentFullEncoder)
+		tc_res_file.write('\n')
 	tc_res_file.close()
 	
-	print("## Summary of test results:")
+	print("### SUMMARY OF TEST RESULTS:")
+	print("#  ")
+	print("#  DASH conformance check using https://github.com/Dash-Industry-Forum/DASH-IF-Conformance")
+	print("#  CLI: php Process_cli.php --cmaf --ctawave --segments <MPD location>")
+	print("#  - Total Conformance Pass: " + str(TS_CONFORMANCE_TOTAL_PASS))
+	print("#  - Total Conformance Fail: " + str(TS_CONFORMANCE_TOTAL_FAIL))
+	print("#  - Total Conformance Unknown: " + str(TS_CONFORMANCE_TOTAL_UNKNOWN))
+	print("#  ")
+	print("#  WAVE test content definition conformance check:")
 	print("#  - Total Pass: "+str(TS_RESULTS_TOTAL_PASS))
 	print("#  - Total Fail: "+str(TS_RESULTS_TOTAL_FAIL))
 	print("#  - Total Not Tested: "+str(TS_RESULTS_TOTAL_NOT_TESTED))
@@ -461,9 +636,237 @@ def check_and_analyse(test_content, tc_vectors_folder, frame_rate_family):
 	print()
 
 
-def analyse_stream(test_content, frame_rate_family):
+def check_and_analyse_ss(ss_test_content, tc_vectors_folder, frame_rate_family, tc_codec):
+	global TS_RESULTS_TOTAL_PASS
+	global TS_RESULTS_TOTAL_FAIL
+	global TS_RESULTS_TOTAL_NOT_TESTABLE
+	global TS_RESULTS_TOTAL_NOT_TESTED
+	global TS_RESULTS_TOTAL_NOT_APPLICABLE
+	global TS_CONFORMANCE_TOTAL_PASS
+	global TS_CONFORMANCE_TOTAL_FAIL
+	global TS_CONFORMANCE_TOTAL_UNKNOWN
+	
+	if frame_rate_family not in [TS_LOCATION_FRAME_RATES_50, TS_LOCATION_FRAME_RATES_59_94, TS_LOCATION_FRAME_RATES_60]:
+		return
+		
+	# Print switching set id
+	print('## Testing ' + ss_test_content.switching_set_id)
+	
+	# Extract necessary data from MPD
+	print('Extracting metadata from MPD...')
+	mpd_info = etree.parse(str(Path(str(tc_vectors_folder) + sep + tc_codec + '_' + frame_rate_family + '_' + SS_NAME + '_' + TS_MPD_NAME)))
+	mpd_info_root = mpd_info.getroot()
+	mpd_representations = [element.get("id") for element in mpd_info_root.iter('{*}Representation')]
+	mpd_representations = sorted(mpd_representations, key=lambda x: x.split('/')[2])
+	print()
+	
+	if len(mpd_representations) > len(ss_test_content.test_stream_ids[0]):
+		ss_test_content.test_stream_ids[2] = TestResult.FAIL \
+		+ ' (too many representations: ' + str(len(mpd_representations)) \
+		+ ' where ' + str(len(ss_test_content.test_stream_ids[0])) + ' expected)'
+	
+	# Check mezzanine version
+	try:
+		ss_test_content.mezzanine_version[1] = float(mpd_info_root[0][1].text.split(' ')[2])
+		ss_test_content.mezzanine_version[2] = TestResult.PASS \
+			if (ss_test_content.mezzanine_version[0] == ss_test_content.mezzanine_version[1]) \
+			else TestResult.FAIL
+	except ValueError:
+		ss_test_content.mezzanine_version[1] = 'not found where expected in MPD ('+mpd_info_root[0][1].text+')'
+		ss_test_content.mezzanine_version[2] = TestResult.UNKNOWN
+		raise
+	
+	# TODO: Check switching set init constraints
+	
+	for i, tc_id in enumerate(ss_test_content.test_stream_ids[0]):
+		if tc_id == '':
+			ss_test_content.test_stream_ids[2][i] = TestResult.UNKNOWN
+		elif 't'+tc_id in mpd_representations[i].split('/'):
+			idx = mpd_representations[i].split('/').index('t'+tc_id)
+			ss_test_content.test_stream_ids[1][i] = mpd_representations[i].split('/')[idx][1:]
+			ss_test_content.test_stream_ids[2][i] = TestResult.PASS
+		else:
+			ss_test_content.test_stream_ids[2][i] = TestResult.FAIL
+		
+		test_stream_dir = Path(str(tc_vectors_folder) + sep + mpd_representations[i] + sep)
+		ss_test_content.test_file_paths[0][i] = str(test_stream_dir)
+		print("Expected test stream folder based on MPD: ")
+		print(str(test_stream_dir))
+		
+		if os.path.isdir(test_stream_dir):
+			print("Found test stream folder \"" + str(test_stream_dir) + "\"...")
+			date_dirs = next(os.walk(str(test_stream_dir)))[1]
+			if len(date_dirs) > 0:
+				date_dirs.sort()
+				most_recent_date = date_dirs[len(date_dirs) - 1]
+			else:
+				ss_test_content.test_file_paths[1][i] = 'release (YYYY-MM-DD) folder missing'
+				ss_test_content.test_file_paths[2][i] = TestResult.FAIL
+				print('No test streams releases found for ' + 't' + tc_id + '.')
+				print()
+				continue
+			test_stream_date_dir = Path(str(test_stream_dir) + sep + most_recent_date + sep)
+			if os.path.isdir(test_stream_date_dir):
+				print(str(test_stream_date_dir) + ' OK')
+			else:
+				ss_test_content.test_file_paths[1][i] = 'release (YYYY-MM-DD) folder missing'
+				ss_test_content.test_file_paths[2][i] = TestResult.FAIL
+				print('Test stream folder \"' + str(test_stream_date_dir) + '\" does not exist.')
+				print()
+				continue
+			test_stream_path = Path(str(test_stream_date_dir) + sep + TS_MPD_NAME)
+			if os.path.isfile(test_stream_path):
+				print(str(test_stream_path) + ' OK')
+				ss_test_content.test_file_paths[1][i] = str(test_stream_path)
+			else:
+				ss_test_content.test_file_paths[1][i] = TS_MPD_NAME + ' file missing'
+				ss_test_content.test_file_paths[2][i] = TestResult.FAIL
+				print(str(test_stream_path) + ' does not exist.')
+				print()
+				continue
+			test_stream_path = Path(str(test_stream_date_dir) + sep + '1' + sep + TS_INIT_SEGMENT_NAME)
+			if os.path.isfile(test_stream_path):
+				print(str(test_stream_path) + ' OK')
+			else:
+				ss_test_content.test_file_paths[1][i] = TS_INIT_SEGMENT_NAME + ' file missing'
+				ss_test_content.test_file_paths[2][i] = TestResult.FAIL
+				print(str(test_stream_path) + ' does not exist.')
+				print()
+				continue
+			test_stream_path = Path(str(test_stream_date_dir) + sep + '1' + sep + TS_FIRST_SEGMENT_NAME)
+			if os.path.isfile(test_stream_path):
+				print(str(test_stream_path) + " OK")
+				print()
+				ss_test_content.test_file_paths[1][i] = str(test_stream_date_dir)
+				if ss_test_content.test_file_paths[0][i] == ss_test_content.test_file_paths[1][i]:
+					ss_test_content.test_file_paths[2][i] = TestResult.PASS
+				else:
+					ss_test_content.test_file_paths[2][i] = TestResult.FAIL
+					print('Incorrect test stream path.')
+					print()
+			else:
+				ss_test_content.test_file_paths[1][i] = TS_FIRST_SEGMENT_NAME + ' file missing'
+				ss_test_content.test_file_paths[2][i] = TestResult.FAIL
+				print(str(test_stream_path) + ' does not exist.')
+				print()
+				continue
+			# Copy analysis result for this test vector
+			# ss_test_content.test_stream_validation_results[i]
+		else:
+			ss_test_content.test_file_paths[1][i] = 'folder missing'
+			ss_test_content.test_file_paths[2][i] = TestResult.FAIL
+			print('Test stream folder \"' + str(test_stream_dir) + '\" does not exist.')
+			print()
+	
+	# TODO: Perform conformance test
+	
+	# Count results
+	if ss_test_content.conformance_test_result != '':
+		if ss_test_content.conformance_test_result['verdict'] == 'PASS':
+			TS_CONFORMANCE_TOTAL_PASS += 1
+		elif ss_test_content.conformance_test_result['verdict'] == 'FAIL':
+			TS_CONFORMANCE_TOTAL_FAIL += 1
+		else:
+			TS_CONFORMANCE_TOTAL_UNKNOWN += 1
+	else:
+		TS_CONFORMANCE_TOTAL_UNKNOWN += 1
+	for a, v in ss_test_content.__dict__.items():
+		if len(v) == 3:
+			if isinstance(v[0], list):
+				for i in range(0, len(v[0])):
+					if v[2][i] == TestResult.PASS:
+						TS_RESULTS_TOTAL_PASS += 1
+	
+					elif v[2][i] == TestResult.FAIL:
+						TS_RESULTS_TOTAL_FAIL += 1
+	
+					elif v[2][i] == TestResult.NOT_TESTED:
+						TS_RESULTS_TOTAL_NOT_TESTED += 1
+	
+					elif v[2][i] == TestResult.NOT_TESTABLE:
+						TS_RESULTS_TOTAL_NOT_TESTABLE += 1
+	
+					elif v[2][i] == TestResult.NOT_APPLICABLE:
+						TS_RESULTS_TOTAL_NOT_APPLICABLE += 1
+			else:
+				if v[2] == TestResult.PASS:
+					TS_RESULTS_TOTAL_PASS += 1
+				
+				elif v[2] == TestResult.FAIL:
+					TS_RESULTS_TOTAL_FAIL += 1
+				
+				elif v[2] == TestResult.NOT_TESTED:
+					TS_RESULTS_TOTAL_NOT_TESTED += 1
+				
+				elif v[2] == TestResult.NOT_TESTABLE:
+					TS_RESULTS_TOTAL_NOT_TESTABLE += 1
+				
+				elif v[2] == TestResult.NOT_APPLICABLE:
+					TS_RESULTS_TOTAL_NOT_APPLICABLE += 1
+
+	# Save metadata to JSON file
+	tc_res_filepath = Path(
+		str(tc_matrix.stem) + '_' + frame_rate_family + '_test_results_' + time_of_analysis + '.json')
+	tc_res_file = open(str(tc_res_filepath), "a")
+	json.dump(ss_test_content, tc_res_file, indent=4, cls=TestContentFullEncoder)
+	tc_res_file.write('\n')
+	tc_res_file.close()
+
+	print("### SUMMARY OF TEST RESULTS:")
+	print("#  ")
+	print("#  DASH conformance check using https://github.com/Dash-Industry-Forum/DASH-IF-Conformance")
+	print("#  CLI: php Process_cli.php --cmaf --ctawave --segments <MPD location>")
+	print("#  - Total Conformance Pass: " + str(TS_CONFORMANCE_TOTAL_PASS))
+	print("#  - Total Conformance Fail: " + str(TS_CONFORMANCE_TOTAL_FAIL))
+	print("#  - Total Conformance Unknown: " + str(TS_CONFORMANCE_TOTAL_UNKNOWN))
+	print("#  ")
+	print("#  WAVE test content definition conformance check:")
+	print("#  - Total Pass: " + str(TS_RESULTS_TOTAL_PASS))
+	print("#  - Total Fail: " + str(TS_RESULTS_TOTAL_FAIL))
+	print("#  - Total Not Tested: " + str(TS_RESULTS_TOTAL_NOT_TESTED))
+	print("#  - Total Not Testable: " + str(TS_RESULTS_TOTAL_NOT_TESTABLE))
+	print("#  - Total Not Applicable: " + str(TS_RESULTS_TOTAL_NOT_APPLICABLE))
+	print()
+
+	print("Test results stored in: " + str(tc_res_filepath))
+	print()
+	
+
+def analyse_stream(test_content, frame_rate_family, debug_folder):
 	# Print test content id
 	print('## Testing t'+test_content.test_stream_id)
+	
+	if CONFORMANCE_TOOL_DOCKER_CONTAINER_ID != '':
+		# Run DASH conformance tool
+		# Examples:
+		# Using remote server: docker exec -w /var/www/html/Utils/ 164bd9ff5c45 php Process_cli.php --cmaf --ctawave --segments
+		# https://dash.akamaized.net/WAVE/vectors/development/cfhd_sets/15_30_60/t1/2022-10-17/stream.mpd
+		# Using local server: docker exec -w /var/www/html/Utils/ 164bd9ff5c45 php Process_cli.php --cmaf --ctawave --segments
+		# http://127.0.0.1:9090/vectors/development/cfhd_sets/15_30_60/t1/2022-10-17/stream.mpd
+		
+		# Determine HTTP location of MPD based on file path
+		# TEMPORARY bypass using Akamai server for segment validation:
+		conformance_http_location = 'https://dash.akamaized.net/WAVE/vectors/development/'+str(Path(test_content.test_file_path+sep+TS_MPD_NAME))[len(HTTPD_PATH):].replace('\\', '/')
+		#conformance_http_location = 'http://'+DETECTED_IP+':'+str(PORT)+str(Path(test_content.test_file_path+sep+TS_MPD_NAME))[len(HTTPD_PATH):].replace('\\', '/')
+		
+		print('Run DASH conformance tool: '+conformance_http_location)
+		# --segments disabled due to bug https://github.com/Dash-Industry-Forum/DASH-IF-Conformance/issues/604
+		# which causes the DASH-IF conformance tool to enter into an infinite loop incorrectly requesting the
+		# same segment (0.m4s) when used specifically with the Python HTTP server
+		ct_cli = ['docker', 'exec', '-w', '/var/www/html/Utils/', CONFORMANCE_TOOL_DOCKER_CONTAINER_ID,
+			 'php', 'Process_cli.php', '--cmaf', '--ctawave', '--segments', conformance_http_location]
+		if sys.platform == "win32":
+			ct_cli.insert(0, 'wsl')
+		conformance_tool_output = subprocess.check_output(ct_cli)
+		
+		json_conformance_tool_output = json.loads(conformance_tool_output)
+		
+		# Anonymize IP in results
+		json_conformance_tool_output['source'] = \
+			json_conformance_tool_output['source'].replace(json_conformance_tool_output['source'][:json_conformance_tool_output['source'].find(":",5)],'http://localhost')
+		
+		test_content.conformance_test_result = json_conformance_tool_output
+		print("DASH conformance test result: "+json_conformance_tool_output['verdict'])
 	
 	# Read initial properties using ffprobe: codec name, sample entry / FourCC, resolution
 	source_videoproperties = subprocess.check_output(
@@ -601,9 +1004,16 @@ def analyse_stream(test_content, frame_rate_family):
 						file_vui_timing_time_scale = int(line.split(' = ')[1])
 						print('VUI timing present')
 						vui_file_frame_rate = float(Decimal(file_vui_timing_time_scale/file_vui_timing_num_units_in_tick/2).quantize(Decimal('.001'), rounding=ROUND_DOWN))
-						test_content.frame_rate[1] = \
-							frame_rate_group.get(vui_file_frame_rate,
-								'invalid VUI timing data (fps='+str(vui_file_frame_rate)+') | ffmpeg detected frame rate = ' + str(file_frame_rate)+'('+str(frame_rate_group.get(file_frame_rate,'?'))+')')
+						if frame_rate_group.get(vui_file_frame_rate):
+							if str(vui_file_frame_rate)[-2:] == '.0':
+								vui_file_frame_rate = int(vui_file_frame_rate)
+							test_content.frame_rate[1] = vui_file_frame_rate
+						else:
+							test_content.frame_rate[1] = \
+								'invalid VUI timing data (fps='+str(vui_file_frame_rate)+') | ffmpeg detected frame rate = ' \
+								+ str(file_frame_rate)+'('+str(frame_rate_group.get(file_frame_rate, '?')) + ')'
+						# The frame rate is already adapted based on the frame rate family when this log occurs
+						# Determine the test result for the frame rate
 						if test_content.frame_rate[0] == 0:
 							test_content.frame_rate[2] = TestResult.UNKNOWN
 						else:
@@ -718,9 +1128,16 @@ def analyse_stream(test_content, frame_rate_family):
 						file_vui_timing_time_scale = int(line.split(' = ')[1])
 						print('VUI timing present')
 						vui_file_frame_rate = float(Decimal(file_vui_timing_time_scale/file_vui_timing_num_units_in_tick).quantize(Decimal('.001'), rounding=ROUND_DOWN))
-						test_content.frame_rate[1] = \
-							frame_rate_group.get(vui_file_frame_rate,
-								'invalid VUI timing data (fps='+str(vui_file_frame_rate)+') | ffmpeg detected frame rate = ' + str(file_frame_rate)+'('+str(frame_rate_group.get(file_frame_rate,'?'))+')')
+						if frame_rate_group.get(vui_file_frame_rate):
+							if str(vui_file_frame_rate)[-2:] == '.0':
+								vui_file_frame_rate = int(vui_file_frame_rate)
+							test_content.frame_rate[1] = vui_file_frame_rate
+						else:
+							test_content.frame_rate[1] = \
+								'invalid VUI timing data (fps='+str(vui_file_frame_rate)+') | ffmpeg detected frame rate = ' \
+								+ str(file_frame_rate)+'('+str(frame_rate_group.get(file_frame_rate, '?')) + ')'
+						# The frame rate is already adapted based on the frame rate family when this log occurs
+						# Determine the test result for the frame rate
 						if test_content.frame_rate[0] == 0:
 							test_content.frame_rate[2] = TestResult.UNKNOWN
 						else:
@@ -775,6 +1192,8 @@ def analyse_stream(test_content, frame_rate_family):
 				
 				# Check duration detected by ffmpeg based on total frames (as the time reported never matches total duration)
 				file_duration = round(eval(line.split('=')[1].lstrip().split(' ')[0]+'*1/'+str(file_frame_rate)), 3)
+				if str(file_duration)[-2:] == '.0':
+					file_duration = int(file_duration)
 				test_content.duration[1] = file_duration
 				if test_content.duration[0] == 0:
 					test_content.duration[2] = TestResult.UNKNOWN
@@ -793,8 +1212,20 @@ def analyse_stream(test_content, frame_rate_family):
 					file_frame_rate = float(line[line.find('kb/s,'):].split(',')[1][:-3])
 				if file_frame_rate == 14.99:
 					file_frame_rate = 14.985  # Compensate for ffmpeg rounding fps
-				test_content.frame_rate[1] = \
-					frame_rate_group.get(file_frame_rate, 'ínvalid ffmpeg detected frame rate = ' + str(file_frame_rate))
+				if frame_rate_group.get(file_frame_rate):
+					if str(file_frame_rate)[-2:] == '.0':
+						file_frame_rate = int(file_frame_rate)
+					test_content.frame_rate[1] = file_frame_rate
+				else:
+					test_content.frame_rate[1] = 'ínvalid ffmpeg detected frame rate = ' + str(file_frame_rate)
+				# Adapt the frame rate now that we know the frame rate family
+				if frame_rate_family == TS_LOCATION_FRAME_RATES_50:
+					test_content.frame_rate[0] = frame_rate_value_50.get(test_content.frame_rate[0], 0)
+				elif frame_rate_family == TS_LOCATION_FRAME_RATES_59_94:
+					test_content.frame_rate[0] = frame_rate_value_59_94.get(test_content.frame_rate[0], 0)
+				elif frame_rate_family == TS_LOCATION_FRAME_RATES_60:
+					test_content.frame_rate[0] = frame_rate_value_60.get(test_content.frame_rate[0], 0)
+				# Determine the test result for the frame rate
 				if test_content.frame_rate[0] == 0:
 					test_content.frame_rate[2] = TestResult.UNKNOWN
 				else:
@@ -823,6 +1254,10 @@ def analyse_stream(test_content, frame_rate_family):
 	headers_trace_file.close()
 	
 	# Init variables for temp data from file
+	mpd_media_presentation_duration = 0
+	file_media_presentation_duration = 0
+	file_timescale = 0
+	file_tot_sample_duration = 0
 	file_stream_brands = []
 	file_samples_per_chunk = []
 	file_chunks_per_fragment_mdat = 0
@@ -832,6 +1267,54 @@ def analyse_stream(test_content, frame_rate_family):
 	file_sample_i_frames = 0
 	file_sample_p_frames = 0
 	file_sample_b_frames = 0
+	
+	# Extract necessary data from MPD
+	print('Extracting metadata from MPD...')
+	mpd_info = etree.parse(str(Path(test_content.test_file_path+sep+TS_MPD_NAME)))
+	mpd_info_root = mpd_info.getroot()
+	mpd_media_presentation_duration = \
+		isodate.parse_duration(mpd_info_root.get("mediaPresentationDuration")).total_seconds()
+	try:
+		test_content.mezzanine_version[1] = float(mpd_info_root[0][1].text.split(' ')[2])
+		test_content.mezzanine_version[2] = TestResult.PASS \
+			if (test_content.mezzanine_version[0] == test_content.mezzanine_version[1]) \
+			else TestResult.FAIL
+	except ValueError:
+		test_content.mezzanine_version[1] = 'not found where expected in MPD ('+mpd_info_root[0][1].text+')'
+		test_content.mezzanine_version[2] = TestResult.UNKNOWN
+		raise
+	try:
+		# Adapt the frame rate now that we know the frame rate family
+		if frame_rate_family == TS_LOCATION_FRAME_RATES_50:
+			test_content.mezzanine_format[0] = \
+				test_content.mezzanine_format[0].split('@')[0] \
+				+ '@' + str(frame_rate_value_50.get(float(test_content.mezzanine_format[0].split('@')[1].split('_')[0]), 'unknown')) \
+				+ '_' + test_content.mezzanine_format[0].split('@')[1].split('_')[1]
+		elif frame_rate_family == TS_LOCATION_FRAME_RATES_59_94:
+			test_content.mezzanine_format[0] = \
+				test_content.mezzanine_format[0].split('@')[0] \
+				+ '@' + str(frame_rate_value_59_94.get(float(test_content.mezzanine_format[0].split('@')[1].split('_')[0]), 'unknown')) \
+				+ '_' + test_content.mezzanine_format[0].split('@')[1].split('_')[1]
+		elif frame_rate_family == TS_LOCATION_FRAME_RATES_60:
+			test_content.mezzanine_format[0] = \
+				test_content.mezzanine_format[0].split('@')[0] \
+				+ '@' + str(frame_rate_value_60.get(float(test_content.mezzanine_format[0].split('@')[1].split('_')[0]), 'unknown')) \
+				+ '_' + test_content.mezzanine_format[0].split('@')[1].split('_')[1]
+		# Construct the string based on MPD.ProgramInformation
+		if (str(mpd_media_presentation_duration)[-2:] == '.0') or (str(mpd_media_presentation_duration).split('.')[1].startswith('99')):
+			adapted_mpd_media_presentation_duration = round(mpd_media_presentation_duration)
+		else:
+			adapted_mpd_media_presentation_duration = mpd_media_presentation_duration
+		test_content.mezzanine_format[1] = '_'.join(mpd_info_root[0][1].text.split(' ')[0].split('_')[2:3]) \
+										+ '_' + str(adapted_mpd_media_presentation_duration)
+		# Determine the test result
+		test_content.mezzanine_format[2] = TestResult.PASS \
+			if (test_content.mezzanine_format[0] == test_content.mezzanine_format[1]) \
+			else TestResult.FAIL
+	except ValueError:
+		test_content.mezzanine_version[1] = 'not found where expected in MPD ('+mpd_info_root[0][1].text+')'
+		test_content.mezzanine_version[2] = TestResult.UNKNOWN
+		raise
 	
 	# Use MP4Box to dump IsoMedia file box metadata for analysis
 	MP4Box_cl = ['MP4Box',
@@ -850,6 +1333,11 @@ def analyse_stream(test_content, frame_rate_family):
 	print('Checking IsoMedia file box XML data...')
 	mp4_frag_info = etree.parse(str(Path(test_content.test_file_path+sep+'1'+sep+TS_INIT_SEGMENT_NAME.split('.')[0]+TS_METADATA_POSTFIX)))
 	mp4_frag_info_root = mp4_frag_info.getroot()
+	
+	mdhd_timescale = [element.get("TimeScale") for element in mp4_frag_info_root.iter('{*}MediaHeaderBox')]
+	if mdhd_timescale:
+		if mdhd_timescale[0] is not None:
+			file_timescale = int(mdhd_timescale[0])
 	
 	file_stream_brands += [element.get("MajorBrand") for element in mp4_frag_info_root.iter('{*}FileTypeBox')]
 	file_stream_brands += [element.get("AlternateBrand") for element in mp4_frag_info_root.iter('{*}BrandEntry')]
@@ -878,8 +1366,12 @@ def analyse_stream(test_content, frame_rate_family):
 	mp4_frag_info = etree.parse(str(Path(test_content.test_file_path+sep+'1'+sep+TS_FIRST_SEGMENT_NAME.split('.')[0]+TS_METADATA_POSTFIX)))
 	mp4_frag_info_root = mp4_frag_info.getroot()
 	file_samples_per_chunk = [element.get("SampleCount") for element in mp4_frag_info_root.iter('{*}TrackRunBox')]
+	file_samples_per_fragment = sum(map(int, file_samples_per_chunk))
 	file_chunks_per_fragment_mdat = sum(1 for element in mp4_frag_info_root.iter('{*}MediaDataBox'))
-	print('Samples per chunk = '+file_samples_per_chunk[0])
+	spc_count = Counter(file_samples_per_chunk)
+	print(str(file_samples_per_fragment) + ' samples per fragment, composed of:')
+	for spc_k, spc_v in spc_count.items():
+		print(str(spc_v) + ' chunk(s) with ' + str(spc_k) + ' sample(s)')
 	file_chunks_per_fragment = len(file_samples_per_chunk)
 	if file_chunks_per_fragment > 1:
 		if int(file_samples_per_chunk[0]) == 1:
@@ -899,7 +1391,7 @@ def analyse_stream(test_content, frame_rate_family):
 	
 	if file_frame_rate != '':
 		test_content.cmaf_fragment_duration[1] = \
-			round(float(eval(file_samples_per_chunk[0]+'*'+str(file_chunks_per_fragment)+'/'+str(file_frame_rate))), 1)
+			round(float(eval(str(file_samples_per_fragment)+'/'+str(file_frame_rate))), 1)
 		if test_content.cmaf_fragment_duration[0] == 0:
 			test_content.cmaf_fragment_duration[2] = TestResult.UNKNOWN
 		else:
@@ -956,6 +1448,8 @@ def analyse_stream(test_content, frame_rate_family):
 		test_content.b_frames_present[1] = False
 	if test_content.b_frames_present[0] == '':
 		test_content.b_frames_present[2] = TestResult.UNKNOWN
+	if test_content.b_frames_present[0] == TestResult.NOT_APPLICABLE:
+		test_content.b_frames_present[2] = TestResult.NOT_APPLICABLE
 	else:
 		test_content.b_frames_present[2] = TestResult.PASS \
 			if (test_content.b_frames_present[0] is test_content.b_frames_present[1]) \
@@ -963,9 +1457,9 @@ def analyse_stream(test_content, frame_rate_family):
 	
 	# In-band parameter sets
 	print('First fragment in-band parameter sets (SPS) = '
-		+ str(file_sps_count-1)+'/'+str(eval(file_samples_per_chunk[0]+'*'+str(file_chunks_per_fragment)))+' frames')
+		+ str(file_sps_count-1)+'/'+str(file_samples_per_fragment)+' frames')
 	print('First fragment in-band parameter sets (PPS) = '
-		+ str(file_pps_count-1)+'/'+str(eval(file_samples_per_chunk[0]+'*'+str(file_chunks_per_fragment)))+' frames')
+		+ str(file_pps_count-1)+'/'+str(file_samples_per_fragment)+' frames')
 	
 	if file_sps_count > 1 or file_pps_count > 1:
 		test_content.parameter_sets_in_band_present[1] = True
@@ -979,6 +1473,130 @@ def analyse_stream(test_content, frame_rate_family):
 			if (test_content.parameter_sets_in_band_present[0] is test_content.parameter_sets_in_band_present[1]) \
 			else TestResult.FAIL
 	
+	# Verify MPD and segment duration are valid
+	print('Extracting SampleDuration from every TrackFragmentHeaderBox... ', end='', flush=True)
+	seg_files = os.listdir(str(Path(test_content.test_file_path + sep + '1' + sep)))
+	for m4s in seg_files:
+		if m4s.endswith('.m4s'):
+			# Avoid re-exporting the first segment's metadata
+			if not os.path.isfile(str(Path(
+				test_content.test_file_path + sep + '1' + sep + m4s.split('.')[
+					0] + TS_METADATA_POSTFIX))):
+				MP4Box_cl3 = ['MP4Box',
+						  str(Path(test_content.test_file_path + sep + '1' + sep + m4s)),
+						  '-init-seg', str(Path(test_content.test_file_path + sep + '1' + sep + TS_INIT_SEGMENT_NAME)),
+						  '-diso']
+				# print('Running MP4Box to dump IsoMedia file box metadata from segment to XML...')
+				subprocess.run(MP4Box_cl3)
+			mp4_frag_info = etree.parse(str(Path(
+				test_content.test_file_path + sep + '1' + sep + m4s.split('.')[
+					0] + TS_METADATA_POSTFIX)))
+			mp4_frag_info_root = mp4_frag_info.getroot()
+			tfhd_s_durations = [element.get("SampleDuration") for element in mp4_frag_info_root.iter('{*}TrackFragmentHeaderBox')]
+			trun_s_count = [element.get("SampleCount") for element in mp4_frag_info_root.iter('{*}TrackRunBox')]
+			for tfhd_sd, trun_sc in zip(tfhd_s_durations, trun_s_count):
+				file_tot_sample_duration += int(tfhd_sd)*int(trun_sc)/int(file_timescale)
+			
+	if test_content.mpd_sample_duration_delta[0] == '':
+		test_content.mpd_sample_duration_delta[2] = TestResult.UNKNOWN
+	else:
+		# Adapt the frame rate now that we know the frame rate family
+		# Expect delta between MPD mediaPresentationDuration and total sample duration to be less than the duration of 1 frame
+		mpd_sample_duration_delta_expected = 0
+		if frame_rate_family == TS_LOCATION_FRAME_RATES_50:
+			mpd_sample_duration_delta_expected = round(1 / frame_rate_value_50.get(
+				1 / test_content.mpd_sample_duration_delta[0]), 4)
+			test_content.mpd_sample_duration_delta[0] = '<' + str(mpd_sample_duration_delta_expected)
+		elif frame_rate_family == TS_LOCATION_FRAME_RATES_59_94:
+			mpd_sample_duration_delta_expected = round(1 / frame_rate_value_59_94.get(
+				1 / test_content.mpd_sample_duration_delta[0]), 4)
+			test_content.mpd_sample_duration_delta[0] = '<' + str(mpd_sample_duration_delta_expected)
+		elif frame_rate_family == TS_LOCATION_FRAME_RATES_60:
+			mpd_sample_duration_delta_expected = round(1 / frame_rate_value_60.get(
+				1 / test_content.mpd_sample_duration_delta[0]), 4)
+			test_content.mpd_sample_duration_delta[0] = '<' + str(mpd_sample_duration_delta_expected)
+		# Save result
+		test_content.mpd_sample_duration_delta[1] = round(abs(file_tot_sample_duration - mpd_media_presentation_duration), 4)
+		# Determine test result
+		test_content.mpd_sample_duration_delta[2] = TestResult.PASS \
+			if (mpd_sample_duration_delta_expected > test_content.mpd_sample_duration_delta[1]) \
+			else TestResult.FAIL
+		
+	print("Done")
+	print("Total sample duration = "+str(file_tot_sample_duration))
+	print("MPD mediaPresentationDuration = "+str(mpd_media_presentation_duration))
+	
+	# If debug enabled, copy all detailed log files to a folder and zip for analysis
+	if debug_folder != '':
+		# Zip
+		debugz_file = str(Path('tcval_logs_' + time_of_analysis + '.zip'))
+		if not os.path.isfile(debugz_file):
+			debugz = zipfile.ZipFile(debugz_file, 'w', zipfile.ZIP_DEFLATED)
+		else:
+			debugz = zipfile.ZipFile(debugz_file, 'a', zipfile.ZIP_DEFLATED)
+		
+		try:
+			tc_file_path_parts = Path(test_content.test_file_path).parts
+			path2filename = str(Path("_".join(tc_file_path_parts[len(tc_file_path_parts)-4:]) + '_trace_headers_init_' + time_of_analysis + '.txt'))
+			debug_filename = str(Path(debug_folder+sep+path2filename))
+			shutil.copy2(str(Path(str(tc_matrix.stem) + '_trace_headers_init_' + time_of_analysis + '.txt')), debug_filename)
+			debugz.write(debug_filename, path2filename)
+		except OSError as e:
+			if e.errno != errno.ENOENT:  # No such file or directory
+				raise
+		try:
+			tc_file_path_parts = Path(test_content.test_file_path + sep + '1').parts
+			path2filename = str(Path("_".join(tc_file_path_parts[len(tc_file_path_parts)-5:]) + '_' + TS_INIT_SEGMENT_NAME.split('.')[0] + TS_METADATA_POSTFIX))
+			debug_filename = str(Path(debug_folder + sep + path2filename))
+			shutil.copy2(str(Path(test_content.test_file_path+sep+'1'+sep+TS_INIT_SEGMENT_NAME.split('.')[0]+TS_METADATA_POSTFIX)), debug_filename)
+			debugz.write(debug_filename, path2filename)
+		except OSError as e:
+			if e.errno != errno.ENOENT:  # No such file or directory
+				raise
+		
+		for m4s in seg_files:
+			if m4s.endswith('.m4s'):
+				try:
+					tc_file_path_parts = Path(test_content.test_file_path + sep + '1').parts
+					path2filename = str(Path(
+						"_".join(tc_file_path_parts[len(tc_file_path_parts)-5:]) + '_' + m4s.split('.')[0] + TS_METADATA_POSTFIX))
+					debug_filename = str(Path(debug_folder + sep + path2filename))
+					shutil.copy2(str(Path(test_content.test_file_path+sep+'1'+sep+m4s.split('.')[0]+TS_METADATA_POSTFIX)), debug_filename)
+					debugz.write(debug_filename, path2filename)
+				except OSError as e:
+					if e.errno != errno.ENOENT:  # No such file or directory
+						raise
+		debugz.close()
+		
+		# Remove detailed logs now that the zip has been created
+		try:
+			tc_file_path_parts = Path(test_content.test_file_path).parts
+			path2filename = str(Path("_".join(tc_file_path_parts[len(tc_file_path_parts) - 4:]) + '_trace_headers_init_' + time_of_analysis + '.txt'))
+			os.remove(str(Path(debug_folder + sep + path2filename)))
+		except OSError as e:
+			if e.errno != errno.ENOENT:  # No such file or directory
+				raise
+		try:
+			tc_file_path_parts = Path(test_content.test_file_path + sep + '1').parts
+			path2filename = str(Path(
+				"_".join(tc_file_path_parts[len(tc_file_path_parts) - 5:]) + '_' + TS_INIT_SEGMENT_NAME.split('.')[
+					0] + TS_METADATA_POSTFIX))
+			os.remove(str(Path(debug_folder + sep + path2filename)))
+		except OSError as e:
+			if e.errno != errno.ENOENT:  # No such file or directory
+				raise
+		for m4s in seg_files:
+			if m4s.endswith('.m4s'):
+				try:
+					tc_file_path_parts = Path(test_content.test_file_path + sep + '1').parts
+					path2filename = str(Path(
+						"_".join(tc_file_path_parts[len(tc_file_path_parts) - 5:]) + '_' + m4s.split('.')[
+							0] + TS_METADATA_POSTFIX))
+					os.remove(str(Path(debug_folder + sep + path2filename)))
+				except OSError as e:
+					if e.errno != errno.ENOENT:  # No such file or directory
+						raise
+	
 	# Remove log files created by ffmpeg and MP4Box
 	try:
 		os.remove(str(Path(str(tc_matrix.stem)+'_trace_headers_init_'+time_of_analysis+'.txt')))
@@ -990,23 +1608,29 @@ def analyse_stream(test_content, frame_rate_family):
 	except OSError as e:
 		if e.errno != errno.ENOENT:		# No such file or directory
 			raise
-	try:
-		os.remove(str(Path(test_content.test_file_path+sep+'1'+sep+TS_FIRST_SEGMENT_NAME.split('.')[0]+TS_METADATA_POSTFIX)))
-	except OSError as e:
-		if e.errno != errno.ENOENT:		# No such file or directory
-			raise
+	
+	for m4s in seg_files:
+		if m4s.endswith('.m4s'):
+			try:
+				os.remove(str(Path(test_content.test_file_path+sep+'1'+sep+m4s.split('.')[0]+TS_METADATA_POSTFIX)))
+			except OSError as e:
+				if e.errno != errno.ENOENT:		# No such file or directory
+					raise
 	
 	print()
 
 
 if __name__ == "__main__":
 	# Check FFMPEG, FFPROBE and GPAC(MP4Box) are installed
-	if which('ffmpeg') is None:
+	if shutil.which('ffmpeg') is None:
 		sys.exit("FFMPEG was not found, ensure FFMPEG is added to the system PATH or is in the same folder as this script.")
-	if which('ffprobe') is None:
+	if shutil.which('ffprobe') is None:
 		sys.exit("FFMPEG was not found, ensure FFPROBE is added to the system PATH or is in the same folder as this script.")
-	if which('MP4Box') is None:
+	if shutil.which('MP4Box') is None:
 		sys.exit("MP4Box was not found, ensure MP4Box is added to the system PATH or is in the same folder as this script.")
+	
+	# Attempt to discover IP address (default)
+	DETECTED_IP = socket.gethostbyname(socket.gethostname())
 	
 	# Basic argument handling
 	parser = argparse.ArgumentParser(description="WAVE Mezzanine Test Vector Content Options Validator.")
@@ -1025,7 +1649,29 @@ if __name__ == "__main__":
 			"that contain subfolders for each frame rate family e.g. \"15_30_60\", "
 			"that contain subfolders t1 .. tN with the test vectors to validate. "
 			"Example of path to test vector MPD: <vectors>/cfhd_sets/15_30_60/t1/2022-09-23/stream.mpd")
-		
+	
+	parser.add_argument(
+		'--mezzanineversion',
+		required=True,
+		help="Mezzanine release version expected to be used as the test vector source. Example: 4")
+	
+	parser.add_argument(
+		'--ip',
+		required=False,
+		help="IP of the local machine that the DASH conformance tool running in Docker should connect to. "
+			"Default: auto detected ("+DETECTED_IP+")")
+	
+	parser.add_argument(
+		'-d', '--docker',
+		required=False,
+		help="ID of Docker container running DASH conformance tool image. Default: disabled")
+	
+	parser.add_argument(
+		'--debug',
+		required=False,
+		nargs='*',
+		help="Preserves logs from ffmpeg and GPAC for analysis as tcval_logs_<date_time>.zip")
+	
 	args = parser.parse_args()
 	
 	tc_matrix = ''
@@ -1041,6 +1687,14 @@ if __name__ == "__main__":
 	if args.vectors is not None:
 		tc_vectors_folder = Path(args.vectors)
 	
+	HTTPD_PATH = str(tc_vectors_folder)
+	
+	if args.docker is not None:
+		if all(char in string.hexdigits for char in args.docker):
+			CONFORMANCE_TOOL_DOCKER_CONTAINER_ID = args.docker
+		else:
+			print("Ignoring Docker container ID because it's not a valid hex string: "+args.docker)
+	
 	# Check CSV matrix file exists
 	if not os.path.isfile(tc_matrix):
 		sys.exit("Test content matrix file \""+str(tc_matrix)+"\" does not exist.")
@@ -1049,9 +1703,58 @@ if __name__ == "__main__":
 	if not os.path.isdir(tc_vectors_folder):
 		sys.exit("Test vectors folder \""+str(tc_vectors_folder)+"\" does not exist")
 	
+	# Check mezzanine version can be parsed as a positive number
+	mezzanine_version = 1
+	try:
+		mezzanine_version = float(args.mezzanineversion)
+		if mezzanine_version < 1:
+			raise ValueError('Expected a positive mezzanine release version of 1 or higher.')
+	except ValueError:
+		sys.exit("Mezzanine version \"" + str(args.mezzanineversion) + "\" is not a positive number.")
+	
+	# Check debug folder can be created
+	debug_folder = ''
+	if args.debug is not None:
+		debug_folder = str(Path(str(Path(__file__).resolve().parent)+sep+"tcval_logs"))
+		print(debug_folder)
+		try:
+			if not os.path.isdir(debug_folder):
+				os.mkdir(debug_folder)
+		except OSError:
+			print("Failed to create the directory for the debug files.")
+	
 	time_of_analysis = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
 	
-	# Read CSV matrix to determine expected streams/values
+	# IP address that will be used
+	if args.ip is not None:
+		try:
+			socket.inet_aton(args.ip)
+			local_ip = args.ip
+		except socket.error:
+			sys.exit('Invalid IP entered:'+str(args.ip))
+	else:
+		local_ip = DETECTED_IP
+	print("IP address: " + local_ip)
+	bg_httpd_process = ''
+	
+	# Ensure Docker container is running and serve test vectors folder
+	if CONFORMANCE_TOOL_DOCKER_CONTAINER_ID != '':
+		print("Ensuring Docker container is running...")
+		ds_cli = ['docker', 'start', CONFORMANCE_TOOL_DOCKER_CONTAINER_ID]
+		if sys.platform == "win32":
+			ds_cli.insert(0, 'wsl')
+		subprocess.run(ds_cli)
+		# TODO: Remove this when JCCP validator is fixed
+		print("Only content present here will be validated using the JCCP validation tool: https://dash.akamaized.net/WAVE/vectors/development/, \n"
+			  "due to bug https://github.com/Dash-Industry-Forum/DASH-IF-Conformance/issues/648")
+		# print("Starting HTTP server...")
+		# bg_httpd_process_err_log = open("bg_httpd_stderr.log", "wb", 0)
+		# bg_httpd_process = subprocess.Popen(["python", "-m", "http.server", str(PORT), "-d", HTTPD_PATH],
+		# 									stderr=bg_httpd_process_err_log)
+		# print("Waiting 5 seconds for HTTP server to start...")
+		# time.sleep(5)
+		
+	# Read CSV matrix data
 	tc_matrix_data = []
 	with open(tc_matrix, mode='r') as csv_file:
 		csv_data = csv.reader(csv_file)
@@ -1059,12 +1762,13 @@ if __name__ == "__main__":
 			tc_matrix_data.append(row)
 	csv_file.close()
 	
+	# Extract expected test stream parameters
 	tc_matrix_ts_start = 0
 	tc_matrix_ts_root = [0, 0]
 	tc_num_streams = 0
 	for i, row in enumerate(tc_matrix_data):
-		if 'Test stream' in row:
-			tc_matrix_ts_start = row.index('Test stream')
+		if TS_START in row:
+			tc_matrix_ts_start = row.index(TS_START)
 		if tc_matrix_ts_start != 0:
 			tc_matrix_ts_root = [i, tc_matrix_ts_start]
 			tc_num_streams = len(tc_matrix_data[tc_matrix_ts_root[0]+1][tc_matrix_ts_root[1]:])
@@ -1073,6 +1777,8 @@ if __name__ == "__main__":
 	test_content = []
 	
 	for i in range(0, tc_num_streams):
+		i_file_brand = tc_matrix_data[tc_matrix_ts_root[0] + TS_DEFINITION_ROW_OFFSET + 11][tc_matrix_ts_root[1] + i]
+		
 		i_parameter_sets_in_cmaf_header_present = True
 		if tc_matrix_data[tc_matrix_ts_root[0]+TS_DEFINITION_ROW_OFFSET+2][tc_matrix_ts_root[1]+i].find('without parameter sets within the CMAF header') > -1:
 			i_parameter_sets_in_cmaf_header_present = False
@@ -1099,19 +1805,30 @@ if __name__ == "__main__":
 		elif tc_matrix_data[tc_matrix_ts_root[0]+TS_DEFINITION_ROW_OFFSET+5][tc_matrix_ts_root[1]+i].find('Each sample') > -1:
 			i_chunks_per_fragment = CmafChunksPerFragment.MULTIPLE_CHUNKS_ARE_SAMPLES
 			
-		i_b_frames_present = True
+		i_b_frames_present = TestResult.NOT_APPLICABLE
 		if tc_matrix_data[tc_matrix_ts_root[0]+TS_DEFINITION_ROW_OFFSET+5][tc_matrix_ts_root[1]+i].find('p-frame only') > -1:
 			i_b_frames_present = False
+		elif tc_matrix_data[tc_matrix_ts_root[0]+TS_DEFINITION_ROW_OFFSET+5][tc_matrix_ts_root[1]+i].find('with b-frames') > -1:
+			i_b_frames_present = True
 			
-		i_resolution = VideoResolution(
-			(lambda x: int(tc_matrix_data[tc_matrix_ts_root[0]+TS_DEFINITION_ROW_OFFSET+6][tc_matrix_ts_root[1]+i].split('x')[0])
-				if x.isdigit() else 0)(tc_matrix_data[tc_matrix_ts_root[0]+TS_DEFINITION_ROW_OFFSET+6][tc_matrix_ts_root[1]+i].split('x')[0]),
-			(lambda x: int(tc_matrix_data[tc_matrix_ts_root[0]+TS_DEFINITION_ROW_OFFSET+6][tc_matrix_ts_root[1]+i].split('x')[1])
-				if x.isdigit() else 0)(tc_matrix_data[tc_matrix_ts_root[0]+TS_DEFINITION_ROW_OFFSET+6][tc_matrix_ts_root[1]+i].split('x')[1]))
-			
+		h_res = (lambda x: int(tc_matrix_data[tc_matrix_ts_root[0]+TS_DEFINITION_ROW_OFFSET+6][tc_matrix_ts_root[1]+i].split('x')[0])
+				if x.isdigit() else 0)(tc_matrix_data[tc_matrix_ts_root[0]+TS_DEFINITION_ROW_OFFSET+6][tc_matrix_ts_root[1]+i].split('x')[0])
+		v_res = (lambda x: int(tc_matrix_data[tc_matrix_ts_root[0]+TS_DEFINITION_ROW_OFFSET+6][tc_matrix_ts_root[1]+i].split('x')[1])
+				if x.isdigit() else 0)(tc_matrix_data[tc_matrix_ts_root[0]+TS_DEFINITION_ROW_OFFSET+6][tc_matrix_ts_root[1]+i].split('x')[1])
+		i_resolution = VideoResolution(h_res, v_res)
+		
+		i_frame_rate = (lambda x: float(tc_matrix_data[tc_matrix_ts_root[0]+TS_DEFINITION_ROW_OFFSET+7][tc_matrix_ts_root[1]+i])
+				if x.replace(".", "", 1).isdigit() else 0)(tc_matrix_data[tc_matrix_ts_root[0]+TS_DEFINITION_ROW_OFFSET+7][tc_matrix_ts_root[1]+i])
+		
+		i_duration = (lambda x: int(tc_matrix_data[tc_matrix_ts_root[0]+TS_DEFINITION_ROW_OFFSET+9][tc_matrix_ts_root[1]+i][:-1])
+				if x.isdigit() else 0)(tc_matrix_data[tc_matrix_ts_root[0]+TS_DEFINITION_ROW_OFFSET+9][tc_matrix_ts_root[1]+i][:-1])
+		
 		i_tc = TestContent(tc_matrix_data[tc_matrix_ts_root[0]+1][tc_matrix_ts_root[1]+i],  # test_stream_id
 			'',  # test_file_path
-			'',  # codec_name
+			mezzanine_version,  # mezzanine version
+			str(h_res)+'x'+str(v_res)+'@'+str(i_frame_rate)+'_'+str(i_duration),  # format as encoded in the mezzanine filename
+			'',  # conformance_test_result
+			cmaf_brand_codecs.get(i_file_brand, 'unknown'),  # codec_name
 			(lambda x: tc_matrix_data[tc_matrix_ts_root[0]+TS_DEFINITION_ROW_OFFSET+10][tc_matrix_ts_root[1]+i].split(' ')[0]
 				if len(x) > 1 else '')(tc_matrix_data[tc_matrix_ts_root[0]+TS_DEFINITION_ROW_OFFSET+10][tc_matrix_ts_root[1]+i].split(' ')),  # codec_profile
 			(lambda x: tc_matrix_data[tc_matrix_ts_root[0]+TS_DEFINITION_ROW_OFFSET+10][tc_matrix_ts_root[1]+i].split(' ')[1]
@@ -1119,7 +1836,7 @@ if __name__ == "__main__":
 						(tc_matrix_data[tc_matrix_ts_root[0]+TS_DEFINITION_ROW_OFFSET+10][tc_matrix_ts_root[1]+i].split(' ')),  # codec_level
 			(lambda x: tc_matrix_data[tc_matrix_ts_root[0]+TS_DEFINITION_ROW_OFFSET+10][tc_matrix_ts_root[1]+i].split(' ')[2]
 				if len(x) > 2 else '')(tc_matrix_data[tc_matrix_ts_root[0]+TS_DEFINITION_ROW_OFFSET+10][tc_matrix_ts_root[1]+i].split(' ')),  # codec_tier
-			tc_matrix_data[tc_matrix_ts_root[0]+TS_DEFINITION_ROW_OFFSET+11][tc_matrix_ts_root[1]+i],  # file_brand
+			i_file_brand,  # file_brand
 			tc_matrix_data[tc_matrix_ts_root[0]+TS_DEFINITION_ROW_OFFSET+2][tc_matrix_ts_root[1]+i][0:4],  # sample_entry_type
 			i_parameter_sets_in_cmaf_header_present,  # parameter_sets_in_cmaf_header_present
 			i_parameter_sets_in_band_present,  # parameter_sets_in_band_present
@@ -1130,19 +1847,70 @@ if __name__ == "__main__":
 			i_chunks_per_fragment,  # chunks_per_fragment
 			i_b_frames_present,  # b_frames_present
 			i_resolution,  # resolution
-			(lambda x: float(tc_matrix_data[tc_matrix_ts_root[0]+TS_DEFINITION_ROW_OFFSET+7][tc_matrix_ts_root[1]+i])
-				if x.replace(".", "", 1).isdigit() else 0)(tc_matrix_data[tc_matrix_ts_root[0]+TS_DEFINITION_ROW_OFFSET+7][tc_matrix_ts_root[1]+i]),  # frame_rate
+			i_frame_rate,  # frame_rate
 			(lambda x: int(tc_matrix_data[tc_matrix_ts_root[0]+TS_DEFINITION_ROW_OFFSET+8][tc_matrix_ts_root[1]+i])
 				if x.isdigit() else 0)(tc_matrix_data[tc_matrix_ts_root[0]+TS_DEFINITION_ROW_OFFSET+8][tc_matrix_ts_root[1]+i]),  # bit rate in kb/s
-			(lambda x: int(tc_matrix_data[tc_matrix_ts_root[0]+TS_DEFINITION_ROW_OFFSET+9][tc_matrix_ts_root[1]+i][:-1])
-				if x.isdigit() else 0)(tc_matrix_data[tc_matrix_ts_root[0]+TS_DEFINITION_ROW_OFFSET+9][tc_matrix_ts_root[1]+i][:-1]),  # duration in s
+			i_duration,  # duration in s
+			1/i_frame_rate  # Maximum allowable delta between MPD mediaPresentationDuration and total sample duration
 			)
 		test_content.append(i_tc)
+
+	# Extract expected switching set parameters
+	tc_matrix_ss_start = 0
+	tc_matrix_ss_root = [0, 0]
+	tc_num_ss_streams = 0
 	
-	# Analyse each stream ID in matrix
+	ss_test_content = ''
+	ss_test_content_indexes = []
+
+	for i, row in enumerate(tc_matrix_data):
+		if SS_START in row:
+			tc_matrix_ss_start = row.index(SS_START)
+		if tc_matrix_ss_start != 0:
+			tc_matrix_ss_root = [i, tc_matrix_ss_start]
+			i_ss_tc_id = []
+			i_ss_tc_path = []
+			i_ss_tc_init_constraints = ''
+			i_ss_tc_ts_validation_res = []
+			for index, m_item in enumerate(tc_matrix_data[tc_matrix_ss_root[0]][tc_matrix_ss_root[1]:]):
+				if m_item == 'X':
+					i_ss_tc_id.append(tc_matrix_data[tc_matrix_ts_root[0]+1][index+1])
+					for tc_index, tc_item in enumerate(test_content):
+						if tc_item.test_stream_id == tc_matrix_data[tc_matrix_ts_root[0]+1][index+1]:
+							i_ss_tc_path.append('')
+							i_ss_tc_init_constraints = tc_item.cmaf_initialisation_constraints[0]
+					ss_test_content_indexes.append([index, tc_matrix_data[tc_matrix_ts_root[0]+1][index+1]])
+			ss_test_content = SwitchingSetTestContent(SS_NAME, i_ss_tc_id, i_ss_tc_path, mezzanine_version,
+													'', i_ss_tc_init_constraints)
+			break
+
+	# Analyse each stream ID and switching set
 	tc_copy = copy.deepcopy(test_content)
-	check_and_analyse(tc_copy, tc_vectors_folder, TS_LOCATION_FRAME_RATES_60)
+	check_and_analyse_v(tc_copy, tc_vectors_folder, TS_LOCATION_FRAME_RATES_60, debug_folder)
+	ss_tc_copy = copy.deepcopy(ss_test_content)
+	check_and_analyse_ss(ss_tc_copy, tc_vectors_folder, TS_LOCATION_FRAME_RATES_60, test_content[0].codec_name[0])
+	
 	tc_copy = copy.deepcopy(test_content)
-	check_and_analyse(tc_copy, tc_vectors_folder, TS_LOCATION_FRAME_RATES_59_94)
+	check_and_analyse_v(tc_copy, tc_vectors_folder, TS_LOCATION_FRAME_RATES_59_94, debug_folder)
+	ss_tc_copy = copy.deepcopy(ss_test_content)
+	check_and_analyse_ss(ss_tc_copy, tc_vectors_folder, TS_LOCATION_FRAME_RATES_59_94, test_content[0].codec_name[0])
+	
 	tc_copy = copy.deepcopy(test_content)
-	check_and_analyse(tc_copy, tc_vectors_folder, TS_LOCATION_FRAME_RATES_50)
+	check_and_analyse_v(tc_copy, tc_vectors_folder, TS_LOCATION_FRAME_RATES_50, debug_folder)
+	ss_tc_copy = copy.deepcopy(ss_test_content)
+	check_and_analyse_ss(ss_tc_copy, tc_vectors_folder, TS_LOCATION_FRAME_RATES_50, test_content[0].codec_name[0])
+
+	# Stop serving test vectors folder
+	# if CONFORMANCE_TOOL_DOCKER_CONTAINER_ID != '':
+		# if bg_httpd_process:
+		# 	bg_httpd_process.terminate()
+		# bg_httpd_process_err_log.close()
+
+	# Remove debug folder if empty
+	if not any(Path(debug_folder).iterdir()):
+		try:
+			os.rmdir(str(Path(debug_folder)))
+		except OSError as e:
+			if e.errno != errno.ENOENT:  # No such file or directory
+				raise
+	
