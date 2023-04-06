@@ -27,6 +27,6 @@ Notes:
 - When the `-d` parameter is present and the referenced Docker container is present, 
 each test vector will also be validated using the JCCP DASH validator.
 For more information please refer to: https://github.com/Dash-Industry-Forum/DASH-IF-Conformance
-- When the `--ip` parameter is not provided the IP address the Docker instance will connect to, in order to access 
-the test vectorswill be autodetected, but it may not be the correct address if the local machine has mulitple 
+- When the `--ip` parameter is not provided the IP address the Docker instance will connect to in order to access 
+the test vectors will be autodetected, but it may not be the correct address if the local machine has mulitple 
 network interfaces.
