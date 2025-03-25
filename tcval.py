@@ -578,9 +578,24 @@ TS_LOCATION_FRAME_RATES_50 = '12.5_25_50'
 TS_LOCATION_FRAME_RATES_59_94 = '14.985_29.97_59.94'
 TS_LOCATION_FRAME_RATES_60 = '15_30_60'
 TS_LOCATION_SETS_POST = '_sets'
+
+# Test vector constants
+TS_DEFAULT_PREFIX = 't'
+TS_LONG_DURATION_ID = 'LD'
+TS_SPLICING_ID_MAIN = 'splice_main'
+TS_SPLICING_ID_AD = 'splice_ad'
+TS_SPLICING_ID_MAIN_DURATION = 10
+TS_SPLICING_ID_AD_DURATION_25 = 5.76
+TS_SPLICING_ID_AD_DURATION_29_97 = 21.255
+TS_SPLICING_ID_AD_DURATION_30 = 6.4
+TS_DEFAULT_25_FAMILY_PREFIX = 'croatia'
+TS_DEFAULT_30_FAMILY_PREFIX = 'tos'
+TS_DEFAULT_SPLICE_AD_PREFIX = 'bbb'
+TS_DEFAULT_SPLICE_MAIN_PREFIX = 'tos'
 TS_MPD_NAME = 'stream.mpd'
 TS_INIT_SEGMENT_NAME = 'init.mp4'
 TS_FIRST_SEGMENT_NAME = '0.m4s'
+TS_FIRST_CHUNKED_SEGMENT_NAME = '0_0.m4s'
 TS_METADATA_POSTFIX = '_info.xml'
 
 # Switching set constants
@@ -665,8 +680,11 @@ def check_and_analyse_v(test_content, tc_vectors_folder, frame_rate_family, debu
 		return
 	
 	for tc in test_content:
+		ts_id_prefix = ''
+		if not tc.test_stream_id.startswith(TS_SPLICING_ID_MAIN) and not tc.test_stream_id.startswith(TS_SPLICING_ID_AD):
+			ts_id_prefix = TS_DEFAULT_PREFIX
 		test_stream_dir = Path(str(tc_vectors_folder)+sep+tc.file_brand[0]+TS_LOCATION_SETS_POST+sep
-							+ frame_rate_family+sep+'t'+tc.test_stream_id+sep)
+							+ frame_rate_family+sep+ts_id_prefix+tc.test_stream_id+sep)
 		
 		if os.path.isdir(test_stream_dir):
 			print("Found test stream folder \""+str(test_stream_dir)+"\"...")
@@ -676,7 +694,7 @@ def check_and_analyse_v(test_content, tc_vectors_folder, frame_rate_family, debu
 				most_recent_date = date_dirs[len(date_dirs)-1]
 			else:
 				tc.test_file_path = 'release (YYYY-MM-DD) folder missing'
-				print('No test streams releases found for '+'t'+tc.test_stream_id+'.')
+				print('No test streams releases found for '+ts_id_prefix+tc.test_stream_id+'.')
 				print()
 				continue
 			test_stream_date_dir = Path(str(test_stream_dir)+sep+most_recent_date+sep)
@@ -709,10 +727,15 @@ def check_and_analyse_v(test_content, tc_vectors_folder, frame_rate_family, debu
 				print(str(test_stream_path)+" OK")
 				tc.test_file_path = str(test_stream_date_dir)
 			else:
-				tc.test_file_path = TS_FIRST_SEGMENT_NAME+' file missing'
-				print(str(test_stream_path)+' does not exist.')
-				print()
-				continue
+				test_stream_path = Path(str(test_stream_date_dir) + sep + '1' + sep + TS_FIRST_CHUNKED_SEGMENT_NAME)
+				if os.path.isfile(test_stream_path):
+					print(str(test_stream_path) + " OK")
+					tc.test_file_path = str(test_stream_date_dir)
+				else:
+					tc.test_file_path = TS_FIRST_SEGMENT_NAME+' file missing'
+					print(str(test_stream_path)+' does not exist.')
+					print()
+					continue
 			# Necessary files are present, run analysis
 			analyse_stream(tc, frame_rate_family, debug_folder)
 		else:
@@ -749,10 +772,20 @@ def check_and_analyse_v(test_content, tc_vectors_folder, frame_rate_family, debu
 	
 	# Save metadata to JSON file
 	tc_res_filepath = Path(str(tc_matrix.stem)+'_'+frame_rate_family+'_test_results_'+time_of_analysis+'.json')
-	tc_res_file = open(str(tc_res_filepath), "w")
-	for tc in test_content:
-		json.dump(tc, tc_res_file, indent=4, cls=TestContentFullEncoder)
-		tc_res_file.write('\n')
+	tc_res_file = open(str(tc_res_filepath), "w", encoding='utf8')
+	tc_res_json = '{\n'
+	tc_nb_results = len(test_content)
+	for i, tc in enumerate(test_content):
+		if 'missing' in tc.test_file_path:
+			result_name = frame_rate_family+'_'+tc.test_stream_id+' (missing)'
+		else:
+			result_name = '_'.join(tc.test_file_path.split('\\')[-3:])
+		tc_res_json += "\""+result_name+"\":" + json.dumps(tc, indent=4, cls=TestContentFullEncoder, ensure_ascii=False)
+		if i<tc_nb_results-1:
+			tc_res_json += ",\n"
+		else:
+			tc_res_json += "\n}\n"
+	tc_res_file.write(tc_res_json)
 	tc_res_file.close()
 	
 	print("### SUMMARY OF TEST RESULTS:")
@@ -1736,17 +1769,59 @@ def analyse_stream(test_content, frame_rate_family, debug_folder):
 				test_content.mezzanine_format[0].split('@')[0] \
 				+ '@' + str(frame_rate_value_60.get(float(test_content.mezzanine_format[0].split('@')[1].split('_')[0]), 'unknown')) \
 				+ '_' + test_content.mezzanine_format[0].split('@')[1].split('_')[1]
+		
+		# Adapt splicing content durations depending on frame rate family
+		len_duration = len(test_content.mezzanine_format[0].split('_')[1])
+		if test_content.test_stream_id.startswith(TS_SPLICING_ID_MAIN):
+			test_content.mezzanine_format[0] = test_content.mezzanine_format[0][:-len_duration] + str(TS_SPLICING_ID_MAIN_DURATION)
+		elif test_content.test_stream_id.startswith(TS_SPLICING_ID_AD) and frame_rate_family == TS_LOCATION_FRAME_RATES_50:
+			test_content.mezzanine_format[0] = test_content.mezzanine_format[0][:-len_duration] + str(TS_SPLICING_ID_AD_DURATION_25)
+		elif test_content.test_stream_id.startswith(TS_SPLICING_ID_AD) and frame_rate_family == TS_LOCATION_FRAME_RATES_59_94:
+			test_content.mezzanine_format[0] = test_content.mezzanine_format[0][:-len_duration] + str(TS_SPLICING_ID_AD_DURATION_29_97)
+		elif test_content.test_stream_id.startswith(TS_SPLICING_ID_AD) and frame_rate_family == TS_LOCATION_FRAME_RATES_60:
+			test_content.mezzanine_format[0] = test_content.mezzanine_format[0][:-len_duration] + str(TS_SPLICING_ID_AD_DURATION_30)
+		
 		# Construct the string based on MPD.ProgramInformation
-		if (str(mpd_media_presentation_duration)[-2:] == '.0') or (str(mpd_media_presentation_duration).split('.')[1].startswith('99')):
-			adapted_mpd_media_presentation_duration = round(mpd_media_presentation_duration)
-		else:
-			adapted_mpd_media_presentation_duration = mpd_media_presentation_duration
-		test_content.mezzanine_format[1] = '_'.join(mpd_info_root[0][1].text.split(' ')[0].split('_')[2:3]) \
-										+ '_' + str(adapted_mpd_media_presentation_duration)
+		mpd_source_mezz = mpd_info_root.findall(".//{*}Source")[0].text.split(' ')[0].split('_')
+		mpd_source_mezz_len = len(mpd_source_mezz)
+		test_content.mezzanine_format[1] = '_'.join(mpd_source_mezz[mpd_source_mezz_len-2:mpd_source_mezz_len])
+		test_content.mezzanine_label[1] = '_'.join(mpd_source_mezz[0:mpd_source_mezz_len-2]) + '_'
+		
 		# Determine the test result
 		test_content.mezzanine_format[2] = TestResult.PASS \
 			if (test_content.mezzanine_format[0] == test_content.mezzanine_format[1]) \
 			else TestResult.FAIL
+			
+		# In case full label not defined use defaults defined for AVC
+		if '_' not in test_content.mezzanine_label[0]:
+			prefix_tmp = ''
+			if test_content.test_stream_id.startswith(TS_SPLICING_ID_AD):
+				prefix_tmp = TS_SPLICING_ID_AD + '_' + TS_DEFAULT_SPLICE_AD_PREFIX + '_' + test_content.mezzanine_label[0]
+			elif test_content.frame_rate[0] in frame_rate_value_50.values():
+				prefix_tmp = TS_DEFAULT_25_FAMILY_PREFIX + '_' + test_content.mezzanine_label[0]
+				if test_content.test_stream_id.startswith(TS_SPLICING_ID_MAIN):
+					prefix_tmp = TS_SPLICING_ID_MAIN + '_' + prefix_tmp
+			elif test_content.frame_rate[0] in frame_rate_value_60.values() or test_content.frame_rate[0] in frame_rate_value_59_94.values():
+				prefix_tmp = TS_DEFAULT_30_FAMILY_PREFIX + '_' + test_content.mezzanine_label[0]
+				if test_content.test_stream_id.startswith(TS_SPLICING_ID_MAIN):
+					prefix_tmp = TS_SPLICING_ID_MAIN + '_' + prefix_tmp
+			if prefix_tmp != '':
+				test_content.mezzanine_label[0] = prefix_tmp + '_'
+			test_content.mezzanine_label[2] = TestResult.PASS \
+				if (test_content.mezzanine_label[0] == test_content.mezzanine_label[1]) \
+				else TestResult.FAIL
+		else: # Use mezzanine label defined for the corresponding frame rate family
+			if frame_rate_family == TS_LOCATION_FRAME_RATES_50:
+				test_content.mezzanine_label[0] = test_content.mezzanine_label[0].split(';')[0] + '_'
+				test_content.mezzanine_label[2] = TestResult.PASS \
+					if (test_content.mezzanine_label[0] == test_content.mezzanine_label[1]) \
+					else TestResult.FAIL
+			elif frame_rate_family == TS_LOCATION_FRAME_RATES_59_94 or frame_rate_family == TS_LOCATION_FRAME_RATES_60:
+				test_content.mezzanine_label[0] = test_content.mezzanine_label[0].split(';')[1] + '_'
+				test_content.mezzanine_label[2] = TestResult.PASS \
+					if (test_content.mezzanine_label[0] == test_content.mezzanine_label[1]) \
+					else TestResult.FAIL
+				
 	except ValueError:
 		test_content.mezzanine_version[1] = 'not found where expected in MPD ('+mpd_info_root[0][1].text+')'
 		test_content.mezzanine_version[2] = TestResult.UNKNOWN
@@ -1874,18 +1949,13 @@ def analyse_stream(test_content, frame_rate_family, debug_folder):
 	MP4Box_cl = ['MP4Box',
 		str(Path(test_content.test_file_path+sep+'1'+sep+TS_INIT_SEGMENT_NAME)),
 		'-diso']
-		
-	MP4Box_cl2 = ['MP4Box',
-		str(Path(test_content.test_file_path+sep+'1'+sep+TS_FIRST_SEGMENT_NAME)),
-		'-init-seg', str(Path(test_content.test_file_path+sep+'1'+sep+TS_INIT_SEGMENT_NAME)),
-		'-diso']
 
 	print('Running MP4Box to dump IsoMedia file box metadata from init and first segments to XML...')
 	subprocess.run(MP4Box_cl)
-	subprocess.run(MP4Box_cl2)
-
+	
 	print('Checking IsoMedia file box XML data...')
-	mp4_frag_info = etree.parse(str(Path(test_content.test_file_path+sep+'1'+sep+TS_INIT_SEGMENT_NAME.split('.')[0]+TS_METADATA_POSTFIX)))
+	mp4_frag_info = etree.parse(str(Path(
+		test_content.test_file_path + sep + '1' + sep + TS_INIT_SEGMENT_NAME.split('.')[0] + TS_METADATA_POSTFIX)))
 	mp4_frag_info_root = mp4_frag_info.getroot()
 	
 	mdhd_timescale = [element.get("TimeScale") for element in mp4_frag_info_root.iter('{*}MediaHeaderBox')]
