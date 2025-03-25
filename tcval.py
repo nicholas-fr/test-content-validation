@@ -7,6 +7,7 @@ import errno
 import isodate
 import json
 import os
+import psutil
 import shutil
 import socket
 import string
@@ -178,7 +179,6 @@ class TestContent:
 		if duration is not None:
 			self.duration = [duration, 0, TestResult.NOT_TESTED]
 		if mpd_sample_duration_delta is not None:
-			self.mpd_sample_duration_delta = [mpd_sample_duration_delta, 0.0, TestResult.NOT_TESTED]
 			self.mpd_sample_duration_delta = [mpd_sample_duration_delta, '', TestResult.NOT_TESTED]
 		if mpd_bitstream_mismatch is not None:
 			self.mpd_bitstream_mismatch = [mpd_bitstream_mismatch, '', TestResult.NOT_TESTED]
@@ -215,7 +215,6 @@ class TestContent:
 			'frame_rate': self.frame_rate[0],
 			'bitrate': self.bitrate[0],
 			'duration': self.duration[0],
-			'mpd_sample_duration_delta': self.mpd_sample_duration_delta[0]
 			'mpd_sample_duration_delta': self.mpd_sample_duration_delta[0],
 			'mpd_bitstream_mismatch': self.mpd_bitstream_mismatch[0]
 		}
@@ -2186,23 +2185,15 @@ def analyse_stream(test_content, frame_rate_family, debug_folder):
 	
 	# Check frame types (I/P/B) present in stream
 	j = 0
-	for ntype, stype in nal_slice_types:
-		if stype == 2 or stype == 7:
-			file_stream_i_frames += 1
-		elif stype == 0 or stype == 5:
-			file_stream_p_frames += 1
-		elif stype == 1 or stype == 6:
-			file_stream_b_frames += 1
-		# Check frame types (I/P/B) present in first fragment if frame rate known
-		if file_frame_rate != '':
-			if j < (test_content.cmaf_fragment_duration[1]*file_frame_rate):
-				if stype == 2 or stype == 7:
-					file_sample_i_frames += 1
-				elif stype == 0 or stype == 5:
-					file_sample_p_frames += 1
-				elif stype == 1 or stype == 6:
-					file_sample_b_frames += 1
-				j += 1
+	
+	if nal_slice_types == [] and ffmpeg_trace_headers_error:
+		print('Error occurred when ffmpeg was processing the stream: unable to determine number of i/p/b frames and in-band parameter sets:')
+		print(fth_last_lines[1][:-1])
+		print(fth_last_lines[0][:-1])
+		test_content.b_frames_present[2] = TestResult.NOT_TESTABLE
+		test_content.parameter_sets_in_band_present[2] = TestResult.NOT_TESTABLE
+		
+	else:
 		for ntype, stype in nal_slice_types:
 			if h264_detected:
 				if stype == 2 or stype == 7:
@@ -2469,7 +2460,7 @@ if __name__ == "__main__":
 		'--ip',
 		required=False,
 		help="IP of the local machine that the DASH conformance tool running in Docker should connect to. "
-			"Default: auto detected ("+DETECTED_IP+")")
+			 "Default: auto detected ("+DETECTED_IP+")")
 	
 	parser.add_argument(
 		'-d', '--docker',
@@ -2552,6 +2543,8 @@ if __name__ == "__main__":
 		local_ip = DETECTED_IP
 	print("IP address: " + local_ip)
 	bg_httpd_process = ''
+	bg_httpd_process_err_log = None
+	server_running = False
 	
 	# Ensure Docker container is running and serve test vectors folder
 	if CONFORMANCE_TOOL_DOCKER_CONTAINER_ID != '':
@@ -2560,16 +2553,25 @@ if __name__ == "__main__":
 		if sys.platform == "win32":
 			ds_cli.insert(0, 'wsl')
 		subprocess.run(ds_cli)
-		# TODO: Remove this when JCCP validator is fixed
-		print("Only content present here will be validated using the JCCP validation tool: https://dash.akamaized.net/WAVE/vectors/development/, \n"
-			  "due to bug https://github.com/Dash-Industry-Forum/DASH-IF-Conformance/issues/648")
-		# print("Starting HTTP server...")
-		# bg_httpd_process_err_log = open("bg_httpd_stderr.log", "wb", 0)
-		# bg_httpd_process = subprocess.Popen(["python", "-m", "http.server", str(PORT), "-d", HTTPD_PATH],
-		# 									stderr=bg_httpd_process_err_log)
-		# print("Waiting 5 seconds for HTTP server to start...")
-		# time.sleep(5)
-		
+		print("Checking for running HTTP server...")
+		for process in psutil.process_iter():
+			if process.name() == 'python.exe' or process.name() == 'py.exe':
+				cmdline = process.cmdline()
+				cmdline = ' '.join(cmdline)
+				if 'http.server' in cmdline and str(PORT) in cmdline:
+					if HTTPD_PATH not in cmdline:
+						process.terminate()  # Try to kill the server pointing to the wrong folder
+					else:
+						server_running = True
+		if not server_running:
+			print("Starting HTTP server...")
+			bg_httpd_process_err_log = open("bg_httpd_stderr.log", "wb", 0)
+			bg_httpd_process = subprocess.Popen(["python", "-m", "http.server", str(PORT), "-d", HTTPD_PATH],
+												stderr=bg_httpd_process_err_log)
+			print("Waiting 5 seconds for HTTP server to start...")
+			time.sleep(5)
+		else:
+			print("HTTP server already running...")
 	# Read CSV matrix data
 	tc_matrix_data = []
 	with open(tc_matrix, mode='r') as csv_file:
@@ -2909,11 +2911,12 @@ if __name__ == "__main__":
 	check_and_analyse_ss(ss_tc_copy, tc_vectors_folder, TS_LOCATION_FRAME_RATES_50, test_content[0].codec_name[0])
 
 	# Stop serving test vectors folder
-	# if CONFORMANCE_TOOL_DOCKER_CONTAINER_ID != '':
-		# if bg_httpd_process:
-		# 	bg_httpd_process.terminate()
-		# bg_httpd_process_err_log.close()
-
+	if CONFORMANCE_TOOL_DOCKER_CONTAINER_ID != '':
+		if bg_httpd_process:
+			bg_httpd_process.terminate()
+		if bg_httpd_process_err_log:
+			bg_httpd_process_err_log.close()
+	
 	# Remove debug folder if empty
 	if not any(Path(debug_folder).iterdir()):
 		try:
