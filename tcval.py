@@ -808,7 +808,7 @@ def check_and_analyse_v(test_content, tc_vectors_folder, frame_rate_family, debu
 	print()
 
 
-def check_and_analyse_ss(ss_test_content, tc_vectors_folder, frame_rate_family, tc_codec):
+def check_and_analyse_ss(ss_test_content, test_content, tc_vectors_folder, frame_rate_family):
 	global TS_RESULTS_TOTAL_PASS
 	global TS_RESULTS_TOTAL_FAIL
 	global TS_RESULTS_TOTAL_NOT_TESTABLE
@@ -2967,9 +2967,9 @@ if __name__ == "__main__":
 	tc_matrix_ss_root = [0, 0]
 	tc_num_ss_streams = 0
 	
-	ss_test_content = ''
-	ss_test_content_indexes = []
-
+	ss_test_content = []
+	#ss_test_content_indexes = []
+	
 	for i, row in enumerate(tc_matrix_data):
 		if SS_START in row:
 			tc_matrix_ss_start = row.index(SS_START)
@@ -2977,36 +2977,62 @@ if __name__ == "__main__":
 			tc_matrix_ss_root = [i, tc_matrix_ss_start]
 			i_ss_tc_id = []
 			i_ss_tc_path = []
+			i_ss_tc_file_brand = []
 			i_ss_tc_init_constraints = ''
-			i_ss_tc_ts_validation_res = []
 			for index, m_item in enumerate(tc_matrix_data[tc_matrix_ss_root[0]][tc_matrix_ss_root[1]:]):
 				if m_item == 'X':
-					i_ss_tc_id.append(tc_matrix_data[tc_matrix_ts_root[0]+1][index+1])
-					for tc_index, tc_item in enumerate(test_content):
-						if tc_item.test_stream_id == tc_matrix_data[tc_matrix_ts_root[0]+1][index+1]:
+					i_ss_tc_id.append(tc_matrix_data[tc_matrix_ts_root[0]+1][index+tc_matrix_ss_start])
+					for tc_item in test_content:
+						if tc_item.test_stream_id == tc_matrix_data[tc_matrix_ts_root[0]+1][index + tc_matrix_ss_start]:
 							i_ss_tc_path.append('')
+							i_ss_tc_file_brand.append(tc_item.file_brand[0])
 							i_ss_tc_init_constraints = tc_item.cmaf_initialisation_constraints[0]
-					ss_test_content_indexes.append([index, tc_matrix_data[tc_matrix_ts_root[0]+1][index+1]])
-			ss_test_content = SwitchingSetTestContent(SS_NAME, i_ss_tc_id, i_ss_tc_path, mezzanine_version,
-													'', i_ss_tc_init_constraints)
+					#ss_test_content_indexes.append([index, tc_matrix_data[tc_matrix_ts_root[0]+1][index + tc_matrix_ss_start]])
+			if len(i_ss_tc_id) > 0:
+				if len(i_ss_tc_file_brand) == 0:
+					sys.exit("Failed to detect switching set test content media profile. Please check the matrix file.")
+				ss_codec = cmaf_brand_codecs.get(i_ss_tc_file_brand[0],'unknown')
+				ss_index = SS_STARTING_INDEX_HEVC
+				if ss_codec == 'avc':
+					i_ss = SwitchingSetTestContent(SS_PREFIX_AVC, i_ss_tc_id, i_ss_tc_path, mezzanine_version,
+												   '', i_ss_tc_init_constraints)
+					ss_test_content.append(i_ss)
+				elif ss_codec == 'hevc':
+					media_profiles = list(OrderedDict.fromkeys(i_ss_tc_file_brand))
+					for profile in media_profiles:
+						i_ss_tc_profile_id = []
+						i_ss_tc_profile_path = []
+						profile_start_index = i_ss_tc_file_brand.index(profile)
+						profile_end_index = profile_start_index+i_ss_tc_file_brand.count(profile)-1
+						for n in range (profile_start_index, profile_end_index+1):
+							i_ss_tc_profile_id.append(i_ss_tc_id[n])
+							i_ss_tc_profile_path.append(i_ss_tc_path[n])
+						i_ss = SwitchingSetTestContent(SS_PREFIX_DEFAULT+str(ss_index)+'_'+profile, i_ss_tc_profile_id, i_ss_tc_profile_path, mezzanine_version,
+													   '', i_ss_tc_init_constraints)
+						ss_test_content.append(i_ss)
+						ss_index += 1
+				else:
+					sys.exit("Failed to detect switching set test content media profile. Please check the matrix file.")
+			else:
+				print("No switching set tracks detected.")
 			break
-
+	
 	# Analyse each stream ID and switching set
 	tc_copy = copy.deepcopy(test_content)
 	check_and_analyse_v(tc_copy, tc_vectors_folder, TS_LOCATION_FRAME_RATES_60, debug_folder)
-	ss_tc_copy = copy.deepcopy(ss_test_content)
-	check_and_analyse_ss(ss_tc_copy, tc_vectors_folder, TS_LOCATION_FRAME_RATES_60, test_content[0].codec_name[0])
+	#ss_tc_copy = copy.deepcopy(ss_test_content)
+	#check_and_analyse_ss(ss_tc_copy, tc_copy, tc_vectors_folder, TS_LOCATION_FRAME_RATES_60)
 	
 	tc_copy = copy.deepcopy(test_content)
 	check_and_analyse_v(tc_copy, tc_vectors_folder, TS_LOCATION_FRAME_RATES_59_94, debug_folder)
-	ss_tc_copy = copy.deepcopy(ss_test_content)
-	check_and_analyse_ss(ss_tc_copy, tc_vectors_folder, TS_LOCATION_FRAME_RATES_59_94, test_content[0].codec_name[0])
+	# ss_tc_copy = copy.deepcopy(ss_test_content)
+	# check_and_analyse_ss(ss_tc_copy, tc_copy, tc_vectors_folder, TS_LOCATION_FRAME_RATES_59_94)
 	
 	tc_copy = copy.deepcopy(test_content)
 	check_and_analyse_v(tc_copy, tc_vectors_folder, TS_LOCATION_FRAME_RATES_50, debug_folder)
-	ss_tc_copy = copy.deepcopy(ss_test_content)
-	check_and_analyse_ss(ss_tc_copy, tc_vectors_folder, TS_LOCATION_FRAME_RATES_50, test_content[0].codec_name[0])
-
+	# ss_tc_copy = copy.deepcopy(ss_test_content)
+	# check_and_analyse_ss(ss_tc_copy, tc_copy, tc_vectors_folder, TS_LOCATION_FRAME_RATES_50)
+	
 	# Stop serving test vectors folder
 	if CONFORMANCE_TOOL_DOCKER_CONTAINER_ID != '':
 		if bg_httpd_process:
