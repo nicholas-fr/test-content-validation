@@ -74,6 +74,7 @@ class TestContent:
 	test_file_path = ''
 	mezzanine_version = ['', '', TestResult.NOT_TESTED]
 	mezzanine_format = ['', '', TestResult.NOT_TESTED]
+	mezzanine_label = ['', '', TestResult.NOT_TESTED]
 	conformance_test_result = ''
 	codec_name = ['', '', TestResult.NOT_TESTED]
 	codec_profile = ['', '', TestResult.NOT_TESTED]
@@ -85,24 +86,35 @@ class TestContent:
 	parameter_sets_in_band_present = ['', '', TestResult.NOT_TESTED]
 	picture_timing_sei_present = ['', '', TestResult.NOT_TESTED]
 	vui_timing_present = ['', '', TestResult.NOT_TESTED]
-	cmaf_fragment_duration = [0, 0, TestResult.NOT_TESTED]
+	vui_primaries_mcoeffs = ['', '', TestResult.NOT_TESTED]
+	vui_transfer_characteristics = ['', '', TestResult.NOT_TESTED]
+	sei_pref_transfer_characteristics = ['', '', TestResult.NOT_TESTED]
+	sei_mastering_display_colour_vol = ['', '', TestResult.NOT_TESTED]
+	sei_content_light_level = ['', '', TestResult.NOT_TESTED]
+	cmaf_fragment_duration = ['', '', TestResult.NOT_TESTED]
 	cmaf_initialisation_constraints = ['', '', TestResult.NOT_TESTABLE]  # Not testable with current test content
 	chunks_per_fragment = [0, 0, TestResult.NOT_TESTED]
 	b_frames_present = ['', '', TestResult.NOT_TESTED]
+	cmf2_sample_flags_present = ['', '', TestResult.NOT_TESTED]  # default_sample_flags, sample_flags and first_sample_flags in the TrackFragmentHeaderBox and TrackRunBox
 	resolution = [VideoResolution(), VideoResolution(), TestResult.NOT_TESTED]
-	frame_rate = [0.0, 0.0, TestResult.NOT_TESTED]
-	bitrate = [0, 0, TestResult.NOT_TESTED]
-	duration = [0, 0, TestResult.NOT_TESTED]
-	mpd_sample_duration_delta = [0.0, 0.0, TestResult.NOT_TESTED]
+	pixel_aspect_ratio = ['', '', TestResult.NOT_TESTED]
+	frame_rate = ['', '', TestResult.NOT_TESTED]
+	bitrate = ['', '', TestResult.NOT_TESTED]
+	duration = ['', '', TestResult.NOT_TESTED]
+	mpd_sample_duration_delta = ['', '', TestResult.NOT_TESTED]
+	mpd_bitstream_mismatch = ['', '', TestResult.NOT_TESTED]
 	
 	
 	def __init__(self, test_stream_id=None, test_file_path=None, mezzanine_version=None, mezzanine_format=None,
-				conformance_test_result=None, codec_name=None, codec_profile=None, codec_level=None, codec_tier=None,
-				file_brand=None, sample_entry_type=None, parameter_sets_in_cmaf_header_present=None,
-				parameter_sets_in_band_present=None, picture_timing_sei_present=None, vui_timing_present=None,
-				cmaf_fragment_duration=None, cmaf_initialisation_constraints=None, chunks_per_fragment=None,
-				b_frames_present=None, resolution=None, frame_rate=None, bitrate=None, duration=None,
-				mpd_sample_duration_delta=None):
+				mezzanine_label=None, conformance_test_result=None, codec_name=None, codec_profile=None,
+				codec_level=None, codec_tier=None, file_brand=None, sample_entry_type=None,
+				parameter_sets_in_cmaf_header_present=None, parameter_sets_in_band_present=None,
+				picture_timing_sei_present=None, vui_timing_present=None, vui_primaries_mcoeffs=None,
+				vui_transfer_characteristics=None, sei_pref_transfer_characteristics=None,
+				sei_mastering_display_colour_vol=None, sei_content_light_level=None, cmaf_fragment_duration=None,
+				cmaf_initialisation_constraints=None, chunks_per_fragment=None, b_frames_present=None,
+				cmf2_sample_flags_present=None, resolution=None, pixel_aspect_ratio=None, frame_rate=None,
+				bitrate=None, duration=None, mpd_sample_duration_delta=None, mpd_bitstream_mismatch=None):
 		if test_stream_id is not None:
 			self.test_stream_id = test_stream_id
 		if test_file_path is not None:
@@ -111,6 +123,8 @@ class TestContent:
 			self.mezzanine_version = [mezzanine_version, '', TestResult.NOT_TESTED]
 		if mezzanine_format is not None:
 			self.mezzanine_format = [mezzanine_format, '', TestResult.NOT_TESTED]
+		if mezzanine_label is not None:
+			self.mezzanine_label = [mezzanine_label, '', TestResult.NOT_TESTED]
 		if conformance_test_result is not None:
 			self.conformance_test_result = conformance_test_result
 		if codec_name is not None:
@@ -133,6 +147,16 @@ class TestContent:
 			self.picture_timing_sei_present = [picture_timing_sei_present, '', TestResult.NOT_TESTED]
 		if vui_timing_present is not None:
 			self.vui_timing_present = [vui_timing_present, '', TestResult.NOT_TESTED]
+		if vui_primaries_mcoeffs is not None:
+			self.vui_primaries_mcoeffs = [vui_primaries_mcoeffs, '', TestResult.NOT_TESTED]
+		if vui_transfer_characteristics is not None:
+			self.vui_transfer_characteristics = [vui_transfer_characteristics, '', TestResult.NOT_TESTED]
+		if sei_pref_transfer_characteristics is not None:
+			self.sei_pref_transfer_characteristics = [sei_pref_transfer_characteristics, '', TestResult.NOT_TESTED]
+		if sei_mastering_display_colour_vol is not None:
+			self.sei_mastering_display_colour_vol = [sei_mastering_display_colour_vol, '', TestResult.NOT_TESTED]
+		if sei_content_light_level is not None:
+			self.sei_content_light_level = [sei_content_light_level, '', TestResult.NOT_TESTED]
 		if cmaf_fragment_duration is not None:
 			self.cmaf_fragment_duration = [cmaf_fragment_duration, 0, TestResult.NOT_TESTED]
 		if cmaf_initialisation_constraints is not None:
@@ -141,8 +165,12 @@ class TestContent:
 			self.chunks_per_fragment = [chunks_per_fragment, 0, TestResult.NOT_TESTED]
 		if b_frames_present is not None:
 			self.b_frames_present = [b_frames_present, '', TestResult.NOT_TESTED]
+		if cmf2_sample_flags_present is not None:
+			self.cmf2_sample_flags_present = [cmf2_sample_flags_present, '', TestResult.NOT_TESTED]
 		if resolution is not None:
 			self.resolution = [resolution, VideoResolution(), TestResult.NOT_TESTED]
+		if pixel_aspect_ratio is not None:
+			self.pixel_aspect_ratio = [pixel_aspect_ratio, '', TestResult.NOT_TESTED]
 		if frame_rate is not None:
 			self.frame_rate = [frame_rate, 0.0, TestResult.NOT_TESTED]
 		if bitrate is not None:
@@ -151,6 +179,9 @@ class TestContent:
 			self.duration = [duration, 0, TestResult.NOT_TESTED]
 		if mpd_sample_duration_delta is not None:
 			self.mpd_sample_duration_delta = [mpd_sample_duration_delta, 0.0, TestResult.NOT_TESTED]
+			self.mpd_sample_duration_delta = [mpd_sample_duration_delta, '', TestResult.NOT_TESTED]
+		if mpd_bitstream_mismatch is not None:
+			self.mpd_bitstream_mismatch = [mpd_bitstream_mismatch, '', TestResult.NOT_TESTED]
 	
 	def json_def(self):
 		return {
@@ -158,6 +189,7 @@ class TestContent:
 			'test_file_path': self.test_file_path,
 			'mezzanine_version': self.mezzanine_version[0],
 			'mezzanine_format': self.mezzanine_format[0],
+			'mezzanine_label': self.mezzanine_label[0],
 			'conformance_test_result': '',  # Only applicable for results
 			'codec_profile': self.codec_profile[0],
 			'codec_level': self.codec_level[0],
@@ -168,15 +200,24 @@ class TestContent:
 			'parameter_sets_in_band_present': self.parameter_sets_in_band_present[0],
 			'picture_timing_sei_present': self.picture_timing_sei_present[0],
 			'vui_timing_present': self.vui_timing_present[0],
+			'vui_primaries_mcoeffs': self.vui_primaries_mcoeffs[0],
+			'vui_transfer_characteristics': self.vui_transfer_characteristics[0],
+			'sei_pref_transfer_characteristics': self.sei_pref_transfer_characteristics[0],
+			'sei_mastering_display_colour_vol': self.sei_mastering_display_colour_vol[0],
+			'sei_content_light_level': self.sei_content_light_level[0],
 			'cmaf_fragment_duration': self.cmaf_fragment_duration[0],
 			'cmaf_initialisation_constraints': self.cmaf_initialisation_constraints[0],
 			'chunks_per_fragment': self.chunks_per_fragment[0],
 			'b_frames_present': self.b_frames_present[0],
+			'cmf2_sample_flags_present': self.cmf2_sample_flags_present[0],
 			'resolution': self.resolution[0],
+			'pixel_aspect_ratio': self.pixel_aspect_ratio[0],
 			'frame_rate': self.frame_rate[0],
 			'bitrate': self.bitrate[0],
 			'duration': self.duration[0],
 			'mpd_sample_duration_delta': self.mpd_sample_duration_delta[0]
+			'mpd_sample_duration_delta': self.mpd_sample_duration_delta[0],
+			'mpd_bitstream_mismatch': self.mpd_bitstream_mismatch[0]
 		}
 	
 	def json_analysis(self):
@@ -185,6 +226,7 @@ class TestContent:
 			'test_file_path': self.test_file_path,
 			'mezzanine_version': self.mezzanine_version[1],
 			'mezzanine_format': self.mezzanine_format[1],
+			'mezzanine_label': self.mezzanine_label[1],
 			'conformance_test_result': '',  # Only applicable for results
 			'codec_profile': self.codec_profile[1],
 			'codec_level': self.codec_level[1],
@@ -195,15 +237,23 @@ class TestContent:
 			'parameter_sets_in_band_present': self.parameter_sets_in_band_present[1],
 			'picture_timing_sei_present': self.picture_timing_sei_present[1],
 			'vui_timing_present': self.vui_timing_present[1],
+			'vui_primaries_mcoeffs': self.vui_primaries_mcoeffs[1],
+			'vui_transfer_characteristics': self.vui_transfer_characteristics[1],
+			'sei_pref_transfer_characteristics': self.sei_pref_transfer_characteristics[1],
+			'sei_mastering_display_colour_vol': self.sei_mastering_display_colour_vol[1],
+			'sei_content_light_level': self.sei_content_light_level[1],
 			'cmaf_fragment_duration': self.cmaf_fragment_duration[1],
 			'cmaf_initialisation_constraints': self.cmaf_initialisation_constraints[1],
 			'chunks_per_fragment': self.chunks_per_fragment[1],
 			'b_frames_present': self.b_frames_present[1],
+			'cmf2_sample_flags_present': self.cmf2_sample_flags_present[1],
 			'resolution': self.resolution[1],
+			'pixel_aspect_ratio': self.pixel_aspect_ratio[1],
 			'frame_rate': self.frame_rate[1],
 			'bitrate': self.bitrate[1],
 			'duration': self.duration[1],
-			'mpd_sample_duration_delta': self.mpd_sample_duration_delta[1]
+			'mpd_sample_duration_delta': self.mpd_sample_duration_delta[1],
+			'mpd_bitstream_mismatch': self.mpd_bitstream_mismatch[1]
 		}
 	
 	def json_res(self):
@@ -212,6 +262,7 @@ class TestContent:
 			'test_file_path': self.test_file_path,
 			'mezzanine_version': self.mezzanine_version[2],
 			'mezzanine_format': self.mezzanine_format[2],
+			'mezzanine_label': self.mezzanine_label[2],
 			'conformance_test_result': self.conformance_test_result,
 			'codec_profile': self.codec_profile[2],
 			'codec_level': self.codec_level[2],
@@ -222,124 +273,175 @@ class TestContent:
 			'parameter_sets_in_band_present': self.parameter_sets_in_band_present[2],
 			'picture_timing_sei_present': self.picture_timing_sei_present[2],
 			'vui_timing_present': self.vui_timing_present[2],
+			'vui_primaries_mcoeffs': self.vui_primaries_mcoeffs[2],
+			'vui_transfer_characteristics': self.vui_transfer_characteristics[2],
+			'sei_pref_transfer_characteristics': self.sei_pref_transfer_characteristics[2],
+			'sei_mastering_display_colour_vol': self.sei_mastering_display_colour_vol[2],
+			'sei_content_light_level': self.sei_content_light_level[2],
 			'cmaf_fragment_duration': self.cmaf_fragment_duration[2],
 			'cmaf_initialisation_constraints': self.cmaf_initialisation_constraints[2],
 			'chunks_per_fragment': self.chunks_per_fragment[2],
 			'b_frames_present': self.b_frames_present[2],
+			'cmf2_sample_flags_present': self.cmf2_sample_flags_present[2],
 			'resolution': self.resolution[2],
+			'pixel_aspect_ratio': self.pixel_aspect_ratio[2],
 			'frame_rate': self.frame_rate[2],
 			'bitrate': self.bitrate[2],
 			'duration': self.duration[2],
-			'mpd_sample_duration_delta': self.mpd_sample_duration_delta[2]
+			'mpd_sample_duration_delta': self.mpd_sample_duration_delta[2],
+			'mpd_bitstream_mismatch': self.mpd_bitstream_mismatch[2]
 		}
 		
 	def json_full(self):
 		return {
-			'TestStreamValidation': {
-				'test_stream_id': self.test_stream_id,
-				'test_file_path': self.test_file_path,
-				'mezzanine_version': {
-					'expected': self.mezzanine_version[0],
-					'detected': self.mezzanine_version[1],
-					'test_result': self.mezzanine_version[2].value
-					},
-				'mezzanine_format': {
-					'expected': self.mezzanine_format[0],
-					'detected': self.mezzanine_format[1],
-					'test_result': self.mezzanine_format[2].value
-					},
-				'conformance_test_result': self.conformance_test_result,
-				'codec_profile': {
-					'expected': self.codec_profile[0],
-					'detected': self.codec_profile[1],
-					'test_result': self.codec_profile[2].value
-					},
-				'codec_level': {
-					'expected': self.codec_level[0],
-					'detected': self.codec_level[1],
-					'test_result': self.codec_level[2].value
-					},
-				'codec_tier': {
-					'expected': self.codec_tier[0],
-					'detected': self.codec_tier[1],
-					'test_result': self.codec_tier[2].value
-					},
-				'file_brand': {
-					'expected': self.file_brand[0],
-					'detected': self.file_brand[1],
-					'test_result': self.file_brand[2].value
-					},
-				'sample_entry_type': {
-					'expected': self.sample_entry_type[0],
-					'detected': self.sample_entry_type[1],
-					'test_result': self.sample_entry_type[2].value
-					},
-				'parameter_sets_in_cmaf_header_present': {
-					'expected': self.parameter_sets_in_cmaf_header_present[0],
-					'detected': self.parameter_sets_in_cmaf_header_present[1],
-					'test_result': self.parameter_sets_in_cmaf_header_present[2].value
-					},
-				'parameter_sets_in_band_present': {
-					'expected': self.parameter_sets_in_band_present[0],
-					'detected': self.parameter_sets_in_band_present[1],
-					'test_result': self.parameter_sets_in_band_present[2].value
-					},
-				'picture_timing_sei_present': {
-					'expected': self.picture_timing_sei_present[0],
-					'detected': self.picture_timing_sei_present[1],
-					'test_result': self.picture_timing_sei_present[2].value
-					},
-				'vui_timing_present': {
-					'expected': self.vui_timing_present[0],
-					'detected': self.vui_timing_present[1],
-					'test_result': self.vui_timing_present[2].value
-					},
-				'cmaf_fragment_duration': {
-					'expected': self.cmaf_fragment_duration[0],
-					'detected': self.cmaf_fragment_duration[1],
-					'test_result': self.cmaf_fragment_duration[2].value
-					},
-				'cmaf_initialisation_constraints': {
-					'expected': self.cmaf_initialisation_constraints[0],
-					'detected': self.cmaf_initialisation_constraints[1],
-					'test_result': self.cmaf_initialisation_constraints[2].value
-					},
-				'chunks_per_fragment': {
-					'expected': self.chunks_per_fragment[0],
-					'detected': self.chunks_per_fragment[1],
-					'test_result': self.chunks_per_fragment[2].value
-					},
-				'b_frames_present': {
-					'expected': self.b_frames_present[0],
-					'detected': self.b_frames_present[1],
-					'test_result': self.b_frames_present[2].value
-					},
-				'resolution': {
-					'expected': self.resolution[0],
-					'detected': self.resolution[1],
-					'test_result': self.resolution[2].value
-					},
-				'frame_rate': {
-					'expected': self.frame_rate[0],
-					'detected': self.frame_rate[1],
-					'test_result': self.frame_rate[2].value
-					},
-				'bitrate': {
-					'expected': self.bitrate[0],
-					'detected': self.bitrate[1],
-					'test_result': self.bitrate[2].value
-					},
-				'duration': {
-					'expected': self.duration[0],
-					'detected': self.duration[1],
-					'test_result': self.duration[2].value
-					},
-				'mpd_sample_duration_delta': {
-					'expected': self.mpd_sample_duration_delta[0],
-					'detected': self.mpd_sample_duration_delta[1],
-					'test_result': self.mpd_sample_duration_delta[2].value
-					}
-			}
+			'test_stream_id': self.test_stream_id,
+			'test_file_path': self.test_file_path,
+			'mezzanine_version': {
+				'expected': self.mezzanine_version[0],
+				'detected': self.mezzanine_version[1],
+				'test_result': self.mezzanine_version[2].value
+				},
+			'mezzanine_format': {
+				'expected': self.mezzanine_format[0],
+				'detected': self.mezzanine_format[1],
+				'test_result': self.mezzanine_format[2].value
+				},
+			'mezzanine_label': {
+				'expected': self.mezzanine_label[0],
+				'detected': self.mezzanine_label[1],
+				'test_result': self.mezzanine_label[2].value
+				},
+			'conformance_test_result': self.conformance_test_result,
+			'codec_profile': {
+				'expected': self.codec_profile[0],
+				'detected': self.codec_profile[1],
+				'test_result': self.codec_profile[2].value
+				},
+			'codec_level': {
+				'expected': self.codec_level[0],
+				'detected': self.codec_level[1],
+				'test_result': self.codec_level[2].value
+				},
+			'codec_tier': {
+				'expected': self.codec_tier[0],
+				'detected': self.codec_tier[1],
+				'test_result': self.codec_tier[2].value
+				},
+			'file_brand': {
+				'expected': self.file_brand[0],
+				'detected': self.file_brand[1],
+				'test_result': self.file_brand[2].value
+				},
+			'sample_entry_type': {
+				'expected': self.sample_entry_type[0],
+				'detected': self.sample_entry_type[1],
+				'test_result': self.sample_entry_type[2].value
+				},
+			'parameter_sets_in_cmaf_header_present': {
+				'expected': self.parameter_sets_in_cmaf_header_present[0],
+				'detected': self.parameter_sets_in_cmaf_header_present[1],
+				'test_result': self.parameter_sets_in_cmaf_header_present[2].value
+				},
+			'parameter_sets_in_band_present': {
+				'expected': self.parameter_sets_in_band_present[0],
+				'detected': self.parameter_sets_in_band_present[1],
+				'test_result': self.parameter_sets_in_band_present[2].value
+				},
+			'picture_timing_sei_present': {
+				'expected': self.picture_timing_sei_present[0],
+				'detected': self.picture_timing_sei_present[1],
+				'test_result': self.picture_timing_sei_present[2].value
+				},
+			'vui_timing_present': {
+				'expected': self.vui_timing_present[0],
+				'detected': self.vui_timing_present[1],
+				'test_result': self.vui_timing_present[2].value
+				},
+			'vui_primaries_mcoeffs': {
+				'expected': self.vui_primaries_mcoeffs[0],
+				'detected': self.vui_primaries_mcoeffs[1],
+				'test_result': self.vui_primaries_mcoeffs[2].value
+				},
+			'vui_transfer_characteristics': {
+				'expected': self.vui_transfer_characteristics[0],
+				'detected': self.vui_transfer_characteristics[1],
+				'test_result': self.vui_transfer_characteristics[2].value
+				},
+			'sei_pref_transfer_characteristics': {
+				'expected': self.sei_pref_transfer_characteristics[0],
+				'detected': self.sei_pref_transfer_characteristics[1],
+				'test_result': self.sei_pref_transfer_characteristics[2].value
+				},
+			'sei_mastering_display_colour_vol': {
+				'expected': self.sei_mastering_display_colour_vol[0],
+				'detected': self.sei_mastering_display_colour_vol[1],
+				'test_result': self.sei_mastering_display_colour_vol[2].value
+				},
+			'sei_content_light_level': {
+				'expected': self.sei_content_light_level[0],
+				'detected': self.sei_content_light_level[1],
+				'test_result': self.sei_content_light_level[2].value
+				},
+			'cmaf_fragment_duration': {
+				'expected': self.cmaf_fragment_duration[0],
+				'detected': self.cmaf_fragment_duration[1],
+				'test_result': self.cmaf_fragment_duration[2].value
+				},
+			'cmaf_initialisation_constraints': {
+				'expected': self.cmaf_initialisation_constraints[0],
+				'detected': self.cmaf_initialisation_constraints[1],
+				'test_result': self.cmaf_initialisation_constraints[2].value
+				},
+			'chunks_per_fragment': {
+				'expected': self.chunks_per_fragment[0],
+				'detected': self.chunks_per_fragment[1],
+				'test_result': self.chunks_per_fragment[2].value
+				},
+			'b_frames_present': {
+				'expected': self.b_frames_present[0],
+				'detected': self.b_frames_present[1],
+				'test_result': self.b_frames_present[2].value
+				},
+			'cmf2_sample_flags_present': {
+				'expected': self.cmf2_sample_flags_present[0],
+				'detected': self.cmf2_sample_flags_present[1],
+				'test_result': self.cmf2_sample_flags_present[2].value
+				},
+			'resolution': {
+				'expected': self.resolution[0],
+				'detected': self.resolution[1],
+				'test_result': self.resolution[2].value
+				},
+			'pixel_aspect_ratio': {
+				'expected': self.pixel_aspect_ratio[0],
+				'detected': self.pixel_aspect_ratio[1],
+				'test_result': self.pixel_aspect_ratio[2].value
+				},
+			'frame_rate': {
+				'expected': self.frame_rate[0],
+				'detected': self.frame_rate[1],
+				'test_result': self.frame_rate[2].value
+				},
+			'bitrate': {
+				'expected': self.bitrate[0],
+				'detected': self.bitrate[1],
+				'test_result': self.bitrate[2].value
+				},
+			'duration': {
+				'expected': self.duration[0],
+				'detected': self.duration[1],
+				'test_result': self.duration[2].value
+				},
+			'mpd_sample_duration_delta': {
+				'expected': self.mpd_sample_duration_delta[0],
+				'detected': self.mpd_sample_duration_delta[1],
+				'test_result': self.mpd_sample_duration_delta[2].value
+				},
+			'mpd_bitstream_mismatch': {
+				'expected': self.mpd_bitstream_mismatch[0],
+				'detected': self.mpd_bitstream_mismatch[1],
+				'test_result': self.mpd_bitstream_mismatch[2].value
+				}
 		}
 
 
@@ -378,9 +480,10 @@ class SwitchingSetTestContent:
 	mezzanine_version = ['', '', TestResult.NOT_TESTED]
 	conformance_test_result = ''
 	cmaf_initialisation_constraints = ['', '', TestResult.NOT_TESTED]
+	mpd_bitstream_mismatches = [[''], [''], TestResult.NOT_TESTED]
 
 	def __init__(self, switching_set_id=None, test_stream_ids=None, test_file_paths=None, mezzanine_version=None,
-				conformance_test_result=None, cmaf_initialisation_constraints=None):
+				conformance_test_result=None, cmaf_initialisation_constraints=None, mpd_bitstream_mismatches=None):
 		if switching_set_id is not None:
 			self.switching_set_id = switching_set_id
 		if test_stream_ids is not None:
@@ -393,6 +496,8 @@ class SwitchingSetTestContent:
 			self.conformance_test_result = conformance_test_result
 		if cmaf_initialisation_constraints is not None:
 			self.cmaf_initialisation_constraints = [cmaf_initialisation_constraints, '', TestResult.NOT_TESTED]
+		if mpd_bitstream_mismatches is not None:
+			self.mpd_bitstream_mismatches = [mpd_bitstream_mismatches, [''] * len(mpd_bitstream_mismatches), [TestResult.NOT_TESTED] * len(mpd_bitstream_mismatches)]
 	
 	def json_def(self):
 		return {
@@ -401,7 +506,8 @@ class SwitchingSetTestContent:
 			'test_file_paths': self.test_file_paths[0],
 			'mezzanine_version': self.mezzanine_version[0],
 			'conformance_test_result': '',  # Only applicable for results
-			'cmaf_initialisation_constraints': self.cmaf_initialisation_constraints[0]
+			'cmaf_initialisation_constraints': self.cmaf_initialisation_constraints[0],
+			'mpd_bitstream_mismatches': self.mpd_bitstream_mismatches[0]
 		}
 	
 	def json_analysis(self):
@@ -411,7 +517,8 @@ class SwitchingSetTestContent:
 			'test_file_paths': self.test_file_paths[1],
 			'mezzanine_version': self.mezzanine_version[1],
 			'conformance_test_result': '',  # Only applicable for results
-			'cmaf_initialisation_constraints': self.cmaf_initialisation_constraints[1]
+			'cmaf_initialisation_constraints': self.cmaf_initialisation_constraints[1],
+			'mpd_bitstream_mismatches': self.mpd_bitstream_mismatches[1]
 		}
 	
 	def json_res(self):
@@ -421,34 +528,38 @@ class SwitchingSetTestContent:
 			'test_file_paths': self.test_file_paths[2],
 			'mezzanine_version': self.mezzanine_version[2],
 			'conformance_test_result': self.conformance_test_result,
-			'cmaf_initialisation_constraints': self.cmaf_initialisation_constraints[2]
+			'cmaf_initialisation_constraints': self.cmaf_initialisation_constraints[2],
+			'mpd_bitstream_mismatches': self.mpd_bitstream_mismatches[2]
 		}
 	
 	def json_full(self):
 		return {
-			'SwitchingSetValidation': {
-				'switching_set_id': self.switching_set_id,
-				'test_stream_ids': {
-					'expected': self.test_stream_ids[0],
-					'detected': self.test_stream_ids[1],
-					'test_result': self.test_stream_ids[2]
-				},
-				'test_file_paths': {
-					'expected': self.test_file_paths[0],
-					'detected': self.test_file_paths[1],
-					'test_result': self.test_file_paths[2]
-				},
-				'mezzanine_version': {
-					'expected': self.mezzanine_version[0],
-					'detected': self.mezzanine_version[1],
-					'test_result': self.mezzanine_version[2].value
-				},
-				'conformance_test_result': self.conformance_test_result,
-				'cmaf_initialisation_constraints': {
-					'expected': self.cmaf_initialisation_constraints[0],
-					'detected': self.cmaf_initialisation_constraints[1],
-					'test_result': self.cmaf_initialisation_constraints[2].value
-				}
+			'switching_set_id': self.switching_set_id,
+			'test_stream_ids': {
+				'expected': self.test_stream_ids[0],
+				'detected': self.test_stream_ids[1],
+				'test_result': self.test_stream_ids[2]
+			},
+			'test_file_paths': {
+				'expected': self.test_file_paths[0],
+				'detected': self.test_file_paths[1],
+				'test_result': self.test_file_paths[2]
+			},
+			'mezzanine_version': {
+				'expected': self.mezzanine_version[0],
+				'detected': self.mezzanine_version[1],
+				'test_result': self.mezzanine_version[2].value
+			},
+			'conformance_test_result': self.conformance_test_result,
+			'cmaf_initialisation_constraints': {
+				'expected': self.cmaf_initialisation_constraints[0],
+				'detected': self.cmaf_initialisation_constraints[1],
+				'test_result': self.cmaf_initialisation_constraints[2].value
+			},
+			'mpd_bitstream_mismatches': {
+				'expected': self.mpd_bitstream_mismatches[0],
+				'detected': self.mpd_bitstream_mismatches[1],
+				'test_result': self.mpd_bitstream_mismatches[2]
 			}
 		}
 
@@ -466,11 +577,26 @@ TS_MPD_NAME = 'stream.mpd'
 TS_INIT_SEGMENT_NAME = 'init.mp4'
 TS_FIRST_SEGMENT_NAME = '0.m4s'
 TS_METADATA_POSTFIX = '_info.xml'
-SS_NAME = 'ss1'  # For now there is only 1 switching set
+
+# Switching set constants
+SS_PREFIX_DEFAULT = 'ss'
+SS_PREFIX_AVC = 'ss1'  # Only 1 switching set for AVC
+SS_STARTING_INDEX_HEVC = 2
+SS_LOCATION = 'switching_sets'
+
+# Codec constants
+C_DEFAULT_VUI_PRIMARIES_MCOEFFS = 1
+C_DEFAULT_VUI_TRANSFER_CHARACTERISTICS = 1
+C_DEFAULT_SAR = "1:1"
+
+# MPD contants
+MPD_DEFAULT_PAR = "16:9"
 
 # Default codec test content matrix CSV file URLs
 MATRIX_AVC = 'https://docs.google.com/spreadsheets/d/1hxbqBdJEEdVIDEkpjZ8f5kvbat_9VGxwFP77AXA_0Ao/export?format=csv'
 MATRIX_AVC_FILENAME = 'matrix_avc.csv'
+MATRIX_HEVC = 'https://docs.google.com/spreadsheets/d/1Bmgv6-cfbWfgwn7l-z0McUUI1rMjaWEwrN_Q30jaWk4/export?format=csv'
+MATRIX_HEVC_FILENAME = 'matrix_hevc.csv'
 
 # Dicts
 h264_profile = {'66': 'Baseline', '77': 'Main', '88': 'Extended', '100': 'High', '110': 'High 10'}
@@ -478,7 +604,7 @@ h264_slice_type = {'0': 'P slice', '1': 'B slice', '2': 'I slice',
 				'3': 'SP slice', '4': 'SI slice',
 				'5': 'P slice', '6': 'B slice', '7': 'I slice',
 				'8': 'SP slice', '9': 'SI slice'}
-h265_profile = {'1': 'Main', '2': 'Main 10'}
+h265_profile = {'1': 'Main', '2': 'Main10'}
 h265_tier = {'0': 'Main', '1': 'High'}
 # For codec_name ffmpeg uses the ISO/IEC MPEG naming convention except for AVC
 codec_names = {'h264': 'avc'}  # Convert codec_name using ITU-T naming convention to ISO/IEC MPEG naming convention
@@ -491,6 +617,11 @@ frame_rate_group = {12.5: 0.25, 14.985: 0.25, 15: 0.25,
 frame_rate_value_50 = {0.25: 12.5, 0.5: 25, 1: 50, 2: 100}
 frame_rate_value_59_94 = {0.25: 14.985, 0.5: 29.97, 1: 59.94, 2: 119.88}
 frame_rate_value_60 = {0.25: 15, 0.5: 30, 1: 60, 2: 120}
+sar_values = {1: "1:1", 2: "12:11", 3: "10:11", 4: "16:11", 5: "40:33", 6: "24:11", 7: "20:11", 8: "32:11", 9: "80:33",
+			  10: "18:11", 11: "15:11", 12: "64:33", 13: "160:99", 14: "4:3", 15: "3:2", 16: "2:1"}
+colour_primaries_mcoeffs_values = {"BT.709": 1, "BT.2020 ncl": 9, "BT.2100 ncl": 9}
+transfer_characteristics_values = {"SDR BT.709": 1, "SDR BT.2020": 14, "PQ10": 16, "HLG10": 18}
+sample_flag_values =  {'not set': False, 'set': True}
 
 # Test results
 TS_RESULTS_TOTAL_PASS = 0
@@ -511,6 +642,7 @@ PORT = 9090
 HTTPD_PATH = ''
 
 # Default parameter values
+codec = 'avc'
 mezzanine_version = 1
 
 
@@ -936,6 +1068,25 @@ def analyse_stream(test_content, frame_rate_family, debug_folder):
 	vui_detected = False
 	sei_detected = False
 	pic_timing_sei_detected = False
+	aspect_ratio_info_detected = False
+	sar = 0
+	sar_width = 0
+	sar_height = 0
+	colour_description_detected = False
+	colour_primaries = 0
+	matrix_coeffs = 0
+	sei_content_light_level_max_cll = None
+	sei_content_light_level_max_fall = None
+	sei_display_mastering_px0 = None
+	sei_display_mastering_py0 = None
+	sei_display_mastering_px1 = None
+	sei_display_mastering_py1 = None
+	sei_display_mastering_px2 = None
+	sei_display_mastering_py2 = None
+	sei_display_mastering_wpx = None
+	sei_display_mastering_wpy = None
+	sei_display_mastering_max_lum = None
+	sei_display_mastering_min_lum = None
 	last_nal_unit_type = 0
 	nal_slice_types = []
 
@@ -948,6 +1099,12 @@ def analyse_stream(test_content, frame_rate_family, debug_folder):
 		if h264_detected:
 			# Tier is not applicable
 			test_content.codec_tier[2] = TestResult.NOT_APPLICABLE
+			# Preferred transfer characteristics SEI s not applicable
+			test_content.sei_pref_transfer_characteristics[2] = TestResult.NOT_APPLICABLE
+			# Mastering Display Colour Volume SEI s not applicable
+			test_content.sei_mastering_display_colour_vol[2] = TestResult.NOT_APPLICABLE
+			# Content Light Level Information SEI s not applicable
+			test_content.sei_content_light_level[2] = TestResult.NOT_APPLICABLE
 			
 			if sps_detected and not sps_processed:
 				if line.__contains__(' profile_idc '):
@@ -979,6 +1136,90 @@ def analyse_stream(test_content, frame_rate_family, debug_folder):
 					print('VUI present')
 					continue
 				if vui_detected:
+					if line.__contains__(' aspect_ratio_info_present_flag '):
+						if int(line.split(' = ')[1]) == 1:
+							aspect_ratio_info_detected = True
+							print('Aspect ratio info present')
+						continue
+					if aspect_ratio_info_detected:
+						if line.__contains__(' aspect_ratio_idc '):
+							sar = int(line.split(' = ')[1])
+							if sar != 255:
+								test_content.pixel_aspect_ratio[1] = sar_values.get(sar, 0)
+								if sar == 0 and test_content.pixel_aspect_ratio[0] == '':
+									test_content.pixel_aspect_ratio[2] = TestResult.NOT_APPLICABLE
+								else:
+									# When defined in the bitstream, default 1:1 SAR expected unless otherwise defined in test expected results
+									if test_content.pixel_aspect_ratio[0] == '':
+										test_content.pixel_aspect_ratio[0] = C_DEFAULT_SAR
+									test_content.pixel_aspect_ratio[2] = TestResult.PASS \
+										if eval(test_content.pixel_aspect_ratio[0].replace(':', '/')) == \
+										eval(test_content.pixel_aspect_ratio[1].replace(':', '/')) \
+										else TestResult.FAIL
+							continue
+						if sar == 255 and line.__contains__(' sar_width '):
+							sar_width = int(line.split(' = ')[1])
+							if sar_height != 0:
+								test_content.pixel_aspect_ratio[1] = str(sar_width) + ":" + str(sar_height)
+								test_content.pixel_aspect_ratio[2] = TestResult.PASS \
+									if eval(test_content.pixel_aspect_ratio[0].replace(':', '/')) == \
+									eval(test_content.pixel_aspect_ratio[1].replace(':', '/')) \
+									else TestResult.FAIL
+							continue
+						if sar == 255 and line.__contains__(' sar_height '):
+							sar_height = int(line.split(' = ')[1])
+							if sar_width != 0:
+								test_content.pixel_aspect_ratio[1] = str(sar_width) + ":" + str(sar_height)
+								test_content.pixel_aspect_ratio[2] = TestResult.PASS \
+									if eval(test_content.pixel_aspect_ratio[0].replace(':', '/')) == \
+									eval(test_content.pixel_aspect_ratio[1].replace(':', '/')) \
+									else TestResult.FAIL
+							continue
+					
+					if line.__contains__(' colour_description_present_flag '):
+						if int(line.split(' = ')[1]) == 1:
+							colour_description_detected = True
+							print('Colour primaries, transfer characteristics, and matrix coeffs present')
+						continue
+					if colour_description_detected:
+						if line.__contains__(' colour_primaries '):
+							colour_primaries = int(line.split(' = ')[1])
+							test_content.vui_primaries_mcoeffs[1] = colour_primaries
+							# When defined in the bitstream, default 1 (BT.709) expected unless otherwise defined in test expected results
+							if test_content.vui_primaries_mcoeffs[0] == '':
+								test_content.vui_primaries_mcoeffs[0] = C_DEFAULT_VUI_PRIMARIES_MCOEFFS
+							if matrix_coeffs != 0:
+								if colour_primaries != matrix_coeffs:
+									test_content.vui_primaries_mcoeffs[2] = TestResult.FAIL
+								else:
+									test_content.vui_primaries_mcoeffs[2] = TestResult.PASS \
+										if test_content.vui_primaries_mcoeffs[0] == test_content.vui_primaries_mcoeffs[1] \
+										else TestResult.FAIL
+							continue
+						if line.__contains__(' matrix_coefficients '):
+							matrix_coeffs = int(line.split(' = ')[1])
+							test_content.vui_primaries_mcoeffs[1] = matrix_coeffs
+							# When defined in the bitstream, default 1 (BT.709) expected unless otherwise defined in test expected results
+							if test_content.vui_primaries_mcoeffs[0] == '':
+								test_content.vui_primaries_mcoeffs[0] = C_DEFAULT_VUI_PRIMARIES_MCOEFFS
+							if colour_primaries != 0:
+								if matrix_coeffs != colour_primaries:
+									test_content.vui_primaries_mcoeffs[2] = TestResult.FAIL
+								else:
+									test_content.vui_primaries_mcoeffs[2] = TestResult.PASS \
+										if test_content.vui_primaries_mcoeffs[0] == test_content.vui_primaries_mcoeffs[1] \
+										else TestResult.FAIL
+							continue
+						if line.__contains__(' transfer_characteristics '):
+							test_content.vui_transfer_characteristics[1] = int(line.split(' = ')[1])
+							# When defined in the bitstream, default 1 (BT.709) expected unless otherwise defined in test expected results
+							if test_content.vui_transfer_characteristics[0] == '':
+								test_content.vui_transfer_characteristics[0] = C_DEFAULT_VUI_TRANSFER_CHARACTERISTICS
+							test_content.vui_transfer_characteristics[2] = TestResult.PASS \
+								if test_content.vui_transfer_characteristics[0] == test_content.vui_transfer_characteristics[1] \
+								else TestResult.FAIL
+							continue
+					
 					if line.__contains__(' timing_info_present_flag ') and line.endswith('= 1\n'):
 						test_content.vui_timing_present[1] = True
 						if test_content.vui_timing_present[0] == '':
@@ -1043,6 +1284,13 @@ def analyse_stream(test_content, frame_rate_family, debug_folder):
 								test_content.picture_timing_sei_present[1]) \
 							else TestResult.FAIL
 					continue
+				
+				if test_content.sei_pref_transfer_characteristics[1] == '':
+					if line.__contains__(' preferred_transfer_characteristics '):
+						test_content.sei_pref_transfer_characteristics[1] = int(line.split(' = ')[1])
+						test_content.sei_pref_transfer_characteristics[2] = TestResult.PASS \
+							if (test_content.sei_pref_transfer_characteristics[0] == test_content.sei_pref_transfer_characteristics[1]) \
+							else TestResult.FAIL
 			
 			if line.__contains__(' nal_unit_type '):
 				last_nal_unit_type = int(line.split(' = ')[1][:-1])
@@ -1103,6 +1351,91 @@ def analyse_stream(test_content, frame_rate_family, debug_folder):
 					print('VUI present')
 					continue
 				if vui_detected:
+					if line.__contains__(' aspect_ratio_info_present_flag '):
+						if int(line.split(' = ')[1]) == 1:
+							aspect_ratio_info_detected = True
+							print('Aspect ratio info present')
+						continue
+					if aspect_ratio_info_detected:
+						if line.__contains__(' aspect_ratio_idc '):
+							sar = int(line.split(' = ')[1])
+							if sar != 255:
+								test_content.pixel_aspect_ratio[1] = sar_values.get(sar, 0)
+								if sar == 0 and test_content.pixel_aspect_ratio[0] == '':
+									test_content.pixel_aspect_ratio[2] = TestResult.NOT_APPLICABLE
+								else:
+									# When defined in the bitstream, default 1:1 SAR expected unless otherwise defined in test expected results
+									if test_content.pixel_aspect_ratio[0] == '':
+										test_content.pixel_aspect_ratio[0] = C_DEFAULT_SAR
+									test_content.pixel_aspect_ratio[2] = TestResult.PASS \
+										if eval(test_content.pixel_aspect_ratio[0].replace(':', '/')) == \
+										eval(test_content.pixel_aspect_ratio[1].replace(':', '/')) \
+										else TestResult.FAIL
+							continue
+						if sar == 255 and line.__contains__(' sar_width '):
+							sar_width = int(line.split(' = ')[1])
+							if sar_height != 0:
+								test_content.pixel_aspect_ratio[1] = str(sar_width) + ":" + str(sar_height)
+								test_content.pixel_aspect_ratio[2] = TestResult.PASS \
+									if eval(test_content.pixel_aspect_ratio[0].replace(':', '/')) == \
+									eval(test_content.pixel_aspect_ratio[1].replace(':', '/')) \
+									else TestResult.FAIL
+							continue
+						if sar == 255 and line.__contains__(' sar_height '):
+							sar_height = int(line.split(' = ')[1])
+							if sar_width != 0:
+								test_content.pixel_aspect_ratio[1] = str(sar_width) + ":" + str(sar_height)
+								test_content.pixel_aspect_ratio[2] = TestResult.PASS \
+									if eval(test_content.pixel_aspect_ratio[0].replace(':', '/')) == \
+									eval(test_content.pixel_aspect_ratio[1].replace(':', '/')) \
+									else TestResult.FAIL
+							continue
+					
+					if line.__contains__(' colour_description_present_flag '):
+						if int(line.split(' = ')[1]) == 1:
+							colour_description_detected = True
+							print('Colour primaries, transfer characteristics, and matrix coeffs present')
+						continue
+					if colour_description_detected:
+						if line.__contains__(' colour_primaries '):
+							colour_primaries = int(line.split(' = ')[1])
+							test_content.vui_primaries_mcoeffs[1] = colour_primaries
+							# When defined in the bitstream, default 1 (BT.709) expected unless otherwise defined in test expected results
+							if test_content.vui_primaries_mcoeffs[0] == '':
+								test_content.vui_primaries_mcoeffs[0] = C_DEFAULT_VUI_PRIMARIES_MCOEFFS
+							if matrix_coeffs != 0:
+								if colour_primaries != matrix_coeffs:
+									test_content.vui_primaries_mcoeffs[2] = TestResult.FAIL
+								else:
+									test_content.vui_primaries_mcoeffs[2] = TestResult.PASS \
+										if test_content.vui_primaries_mcoeffs[0] == test_content.vui_primaries_mcoeffs[1] \
+										else TestResult.FAIL
+							continue
+						if line.__contains__(' matrix_coefficients '):
+							matrix_coeffs = int(line.split(' = ')[1])
+							test_content.vui_primaries_mcoeffs[1] = matrix_coeffs
+							# When defined in the bitstream, default 1 (BT.709) expected unless otherwise defined in test expected results
+							if test_content.vui_primaries_mcoeffs[0] == '':
+								test_content.vui_primaries_mcoeffs[0] = C_DEFAULT_VUI_PRIMARIES_MCOEFFS
+							if colour_primaries != 0:
+								if matrix_coeffs != colour_primaries:
+									test_content.vui_primaries_mcoeffs[2] = TestResult.FAIL
+								else:
+									test_content.vui_primaries_mcoeffs[2] = TestResult.PASS \
+										if test_content.vui_primaries_mcoeffs[0] == test_content.vui_primaries_mcoeffs[1] \
+										else TestResult.FAIL
+							continue
+						if line.__contains__(' transfer_characteristics '):
+							test_content.vui_transfer_characteristics[1] = int(line.split(' = ')[1])
+							# When defined in the bitstream, default 1 (BT.709) expected unless otherwise defined in test expected results
+							if test_content.vui_transfer_characteristics[0] == '':
+								test_content.vui_transfer_characteristics[0] = C_DEFAULT_VUI_TRANSFER_CHARACTERISTICS
+							test_content.vui_transfer_characteristics[2] = TestResult.PASS \
+								if test_content.vui_transfer_characteristics[0] == \
+								   test_content.vui_transfer_characteristics[1] \
+								else TestResult.FAIL
+							continue
+							
 					if line.__contains__(' vui_timing_info_present_flag ') and line.endswith('= 1\n'):
 						test_content.vui_timing_present[1] = True
 						if test_content.vui_timing_present[0] == '':
@@ -1167,7 +1500,85 @@ def analyse_stream(test_content, frame_rate_family, debug_folder):
 								test_content.picture_timing_sei_present[1]) \
 							else TestResult.FAIL
 					continue
-			
+				
+				if test_content.sei_pref_transfer_characteristics[1] == '':
+					if line.__contains__(' preferred_transfer_characteristics '):
+						test_content.sei_pref_transfer_characteristics[1] = int(line.split(' = ')[1])
+						test_content.sei_pref_transfer_characteristics[2] = TestResult.PASS \
+							if (test_content.sei_pref_transfer_characteristics[0] == test_content.sei_pref_transfer_characteristics[1]) \
+							else TestResult.FAIL
+					
+				# Content Light Level Information
+				if test_content.sei_content_light_level[1] == '':
+					if line.__contains__(' max_content_light_level '):
+						sei_content_light_level_max_cll = int(line.split(' = ')[1])
+					if line.__contains__(' max_pic_average_light_level '):
+						sei_content_light_level_max_fall = int(line.split(' = ')[1])
+					if line.__contains__(' max_content_light_level ') or line.__contains__(' max_pic_average_light_level '):
+						if sei_content_light_level_max_cll is not None and sei_content_light_level_max_fall is not None:
+							print('MaxFALL = '+str(sei_content_light_level_max_fall))
+							print('MaxCLL = '+str(sei_content_light_level_max_cll))
+							test_content.sei_content_light_level [1] = (sei_content_light_level_max_cll,sei_content_light_level_max_fall)
+							if test_content.vui_transfer_characteristics[0] == transfer_characteristics_values.get("PQ10"):
+								test_content.sei_content_light_level [2] = TestResult.PASS
+							else:
+								test_content.sei_content_light_level [2] = TestResult.FAIL
+				
+				# Mastering Display Colour Volume
+				if test_content.sei_mastering_display_colour_vol [1] == '':
+					if line.__contains__(' display_primaries_x[0] '):
+						sei_display_mastering_px0 = int(line.split(' = ')[1])
+					if line.__contains__(' display_primaries_y[0] '):
+						sei_display_mastering_py0 = int(line.split(' = ')[1])
+					if line.__contains__(' display_primaries_x[1] '):
+						sei_display_mastering_px1 = int(line.split(' = ')[1])
+					if line.__contains__(' display_primaries_y[1] '):
+						sei_display_mastering_py1 = int(line.split(' = ')[1])
+					if line.__contains__(' display_primaries_x[2] '):
+						sei_display_mastering_px2 = int(line.split(' = ')[1])
+					if line.__contains__(' display_primaries_y[2] '):
+						sei_display_mastering_py2 = int(line.split(' = ')[1])
+					if line.__contains__(' white_point_x '):
+						sei_display_mastering_wpx = int(line.split(' = ')[1])
+					if line.__contains__(' white_point_y '):
+						sei_display_mastering_wpy = int(line.split(' = ')[1])
+					if line.__contains__(' max_display_mastering_luminance '):
+						sei_display_mastering_max_lum = int(line.split(' = ')[1])
+					if line.__contains__(' min_display_mastering_luminance '):
+						sei_display_mastering_min_lum = int(line.split(' = ')[1])
+						if sei_display_mastering_px0 is not None and sei_display_mastering_py0 is not None \
+							and sei_display_mastering_px1 is not None and sei_display_mastering_py1 is not None \
+							and sei_display_mastering_px2 is not None and sei_display_mastering_py2 is not None \
+							and sei_display_mastering_wpx is not None and sei_display_mastering_wpy is not None \
+							and sei_display_mastering_max_lum is not None and sei_display_mastering_min_lum is not None:
+							px = [sei_display_mastering_px0,sei_display_mastering_px1,sei_display_mastering_px2]
+							py = [sei_display_mastering_py0,sei_display_mastering_py1,sei_display_mastering_py2]
+							red_index = px.index(max(px))
+							green_index = py.index(max(py))
+							blue_index = 0
+							for p in range (0,3):
+								if p != red_index and p != green_index:
+									blue_index = p
+							red = (round(px[red_index]*0.00002,5),round(py[red_index]*0.00002,5))
+							green = (round(px[green_index]*0.00002,5),round(py[green_index]*0.00002,5))
+							blue = (round(px[blue_index]*0.00002,5),round(py[blue_index]*0.00002,5))
+							white = (round(sei_display_mastering_wpx*0.00002,5),round(sei_display_mastering_wpy*0.00002,5))
+							max_lum = sei_display_mastering_max_lum*0.0001
+							min_lum = round(sei_display_mastering_min_lum*0.0001,5)
+							mastering_display_cv = 'R='+str(red)+' G='+str(green)+' B='+str(blue)+' W='+str(white)+' Max='+str(max_lum)+' Min='+str(min_lum)
+							print('Mastering Display Colour Volume = '+mastering_display_cv)
+							test_content.sei_mastering_display_colour_vol [1] = mastering_display_cv
+							if test_content.vui_transfer_characteristics[0] == transfer_characteristics_values.get("PQ10"):
+								test_content.sei_mastering_display_colour_vol[2] = TestResult.PASS
+							else:
+								test_content.sei_mastering_display_colour_vol[2] = TestResult.FAIL
+						
+			if line.__contains__(' nal_unit_type '):
+				last_nal_unit_type = int(line.split(' = ')[1][:-1])
+				continue
+			if line.__contains__(' slice_type '):
+				nal_slice_types.append([last_nal_unit_type, int(line.split(' = ')[1][:-1])])
+				continue
 			elif line.startswith('[trace_headers'):
 				if line.endswith('] Sequence Parameter Set\n'):
 					file_sps_count += 1
@@ -1262,6 +1673,9 @@ def analyse_stream(test_content, frame_rate_family, debug_folder):
 	file_tot_sample_duration = 0
 	file_stream_brands = []
 	file_samples_per_chunk = []
+	file_samples_per_fragment = 0
+	file_total_samples = 0
+	file_total_fragments = 0
 	file_chunks_per_fragment_mdat = 0
 	file_stream_i_frames = 0
 	file_stream_p_frames = 0
@@ -1269,6 +1683,16 @@ def analyse_stream(test_content, frame_rate_family, debug_folder):
 	file_sample_i_frames = 0
 	file_sample_p_frames = 0
 	file_sample_b_frames = 0
+	file_tfhd_sample_description_index_present = []
+	file_tfhd_sample_duration_present = []
+	file_tfhd_sample_size_present = []
+	file_tfhd_default_sample_flags_present = []
+	file_trun_version = []
+	file_trun_sample_duration_present = []
+	file_trun_sample_flags_present = []
+	file_trune_sample_duration_present = []
+	file_trune_sample_size_present = []
+	file_trune_sample_flags_present = []
 	
 	# Extract necessary data from MPD
 	print('Extracting metadata from MPD...')
@@ -1318,6 +1742,124 @@ def analyse_stream(test_content, frame_rate_family, debug_folder):
 		test_content.mezzanine_version[2] = TestResult.UNKNOWN
 		raise
 	
+	# Check AdaptatationSet
+	mpd_adaptation_set = mpd_info_root.findall('.//{*}AdaptationSet')[0]
+	if int(mpd_adaptation_set.get('maxWidth')) != test_content.resolution[1].horizontal:
+		test_content.mpd_bitstream_mismatch[1] += 'AdaptationSet@maxWidth='+str(mpd_adaptation_set.get('maxWidth'))+';'
+		test_content.mpd_bitstream_mismatch[0] += 'AdaptationSet@maxWidth='+str(test_content.resolution[1].horizontal)+';'
+	
+	if int(mpd_adaptation_set.get('maxHeight')) != test_content.resolution[1].vertical:
+		test_content.mpd_bitstream_mismatch[1] += 'AdaptationSet@maxHeight='+str(mpd_adaptation_set.get('maxHeight'))+';'
+		test_content.mpd_bitstream_mismatch[0] += 'AdaptationSet@maxHeight=' + str(test_content.resolution[1].vertical) + ';'
+		
+	if round(eval(mpd_adaptation_set.get('maxFrameRate')),3) != test_content.frame_rate[1]:
+		test_content.mpd_bitstream_mismatch[1] += 'AdaptationSet@maxFrameRate='+str(mpd_adaptation_set.get('maxFrameRate'))+';'
+		test_content.mpd_bitstream_mismatch[0] += 'AdaptationSet@maxFrameRate='+str(test_content.frame_rate[1])+';'
+		
+	if mpd_adaptation_set.get('par') != MPD_DEFAULT_PAR:
+		test_content.mpd_bitstream_mismatch[1] += 'AdaptationSet@par='+str(mpd_adaptation_set.get('par'))+';'
+		test_content.mpd_bitstream_mismatch[0] += 'AdaptationSet@par='+MPD_DEFAULT_PAR+';'
+	
+	if test_content.file_brand[0] not in mpd_adaptation_set.get('containerProfiles'):
+		test_content.mpd_bitstream_mismatch[1] += 'AdaptationSet@containerProfiles='+str(mpd_adaptation_set.get('containerProfiles'))+';'
+		test_content.mpd_bitstream_mismatch[0] += 'AdaptationSet@containerProfiles='+str(test_content.file_brand[0])+';'
+		
+	# Check EssentialProperty
+	ep_colour_promaries = False
+	ep_matrix_coeffs = False
+	ep_transfer_characteristics = False
+	sp_transfer_characteristics = False
+	mpd_adaptation_set_ep = mpd_adaptation_set.findall('.//{*}EssentialProperty')
+	if len(mpd_adaptation_set_ep) > 0:
+		for ep in mpd_adaptation_set_ep:
+			scheme_id_uri = ep.get('schemeIdUri')
+			if scheme_id_uri == 'urn:mpeg:mpegB:cicp:ColourPrimaries':
+				ep_colour_promaries = True
+				print("urn:mpeg:mpegB:cicp:ColourPrimaries="+str(ep.get('value')))
+				if not ep.get('value') == str(test_content.vui_primaries_mcoeffs[1]):
+					test_content.mpd_bitstream_mismatch[1] \
+						+= 'AdaptationSet.EssentialProperty -> ColourPrimaries='+str(ep.get('value'))+';'
+					test_content.mpd_bitstream_mismatch[0] \
+						+= 'AdaptationSet.EssentialProperty -> ColourPrimaries=' + str(test_content.vui_primaries_mcoeffs[1]) + ';'
+			elif scheme_id_uri == 'urn:mpeg:mpegB:cicp:MatrixCoefficients':
+				ep_matrix_coeffs = True
+				print("urn:mpeg:mpegB:cicp:MatrixCoefficients=" + str(ep.get('value')))
+				if not ep.get('value') == str(test_content.vui_primaries_mcoeffs[1]):
+					test_content.mpd_bitstream_mismatch[1] \
+						+= 'AdaptationSet.EssentialProperty -> MatrixCoefficients='+str(ep.get('value'))+';'
+					test_content.mpd_bitstream_mismatch[0] \
+						+= 'AdaptationSet.EssentialProperty -> MatrixCoefficients=' + str(test_content.vui_primaries_mcoeffs[1]) + ';'
+			elif scheme_id_uri == 'urn:mpeg:mpegB:cicp:TransferCharacteristics':
+				ep_transfer_characteristics = True
+				print("urn:mpeg:mpegB:cicp:TransferCharacteristics=" + str(ep.get('value')))
+				if not ep.get('value') == str(test_content.vui_transfer_characteristics[1]):
+					test_content.mpd_bitstream_mismatch[1] \
+						+= 'AdaptationSet.EssentialProperty -> TransferCharacteristics='+str(ep.get('value'))+';'
+					test_content.mpd_bitstream_mismatch[0] \
+						+= 'AdaptationSet.EssentialProperty -> TransferCharacteristics=' + str(test_content.vui_transfer_characteristics[1]) + ';'
+	# Check SupplementalProperty
+	mpd_adaptation_set_sp = mpd_adaptation_set.findall('.//{*}SupplementalProperty')
+	if len(mpd_adaptation_set_sp) > 0:
+		for sp in mpd_adaptation_set_sp:
+			scheme_id_uri = sp.get('schemeIdUri')
+			if scheme_id_uri == 'urn:mpeg:mpegB:cicp:TransferCharacteristics':
+				sp_transfer_characteristics = True
+				print("urn:mpeg:mpegB:cicp:TransferCharacteristics=" + str(sp.get('value')))
+				if not sp.get('value') == str(test_content.sei_pref_transfer_characteristics[1]):
+					test_content.mpd_bitstream_mismatch[1] \
+						+= 'AdaptationSet.SupplementalProperty -> TransferCharacteristics='+str(sp.get('value'))+';'
+					test_content.mpd_bitstream_mismatch[0] \
+						+= 'AdaptationSet.SupplementalProperty -> TransferCharacteristics='+str(test_content.sei_pref_transfer_characteristics[1])+';'
+	
+	if (test_content.vui_primaries_mcoeffs[1] == colour_primaries_mcoeffs_values.get("BT.2020 ncl")) \
+			or (test_content.vui_primaries_mcoeffs[1] == colour_primaries_mcoeffs_values.get("BT.2100 ncl")):
+		if not ep_colour_promaries:
+			test_content.mpd_bitstream_mismatch[1] \
+				+= 'AdaptationSet.EssentialProperty -> ColourPrimaries=<missing>;'
+			test_content.mpd_bitstream_mismatch[0] \
+				+= 'AdaptationSet.EssentialProperty -> ColourPrimaries=' + str(test_content.vui_primaries_mcoeffs[1]) + ';'
+		if not ep_matrix_coeffs:
+			test_content.mpd_bitstream_mismatch[1] \
+				+= 'AdaptationSet.EssentialProperty -> MatrixCoefficient=<missing>;'
+			test_content.mpd_bitstream_mismatch[0] \
+				+= 'AdaptationSet.EssentialProperty -> MatrixCoefficients=' + str(test_content.vui_primaries_mcoeffs[1]) + ';'
+	if test_content.vui_transfer_characteristics[1] == transfer_characteristics_values.get("PQ10"):
+		if not ep_transfer_characteristics:
+			test_content.mpd_bitstream_mismatch[1] \
+				+= 'AdaptationSet.EssentialProperty -> TransferCharacteristics=<missing>;'
+			test_content.mpd_bitstream_mismatch[0] \
+				+= 'AdaptationSet.EssentialProperty -> TransferCharacteristics=' + str(test_content.vui_transfer_characteristics[1]) + ';'
+	if test_content.vui_transfer_characteristics[1] == transfer_characteristics_values.get("HLG10"):
+		if not ep_transfer_characteristics:
+			test_content.mpd_bitstream_mismatch[1] \
+				+= 'AdaptationSet.EssentialProperty -> TransferCharacteristics=<missing>;'
+			test_content.mpd_bitstream_mismatch[0] \
+				+= 'AdaptationSet.EssentialProperty -> TransferCharacteristics=' + str(test_content.vui_transfer_characteristics[1]) + ';'
+	if test_content.sei_pref_transfer_characteristics[1] == transfer_characteristics_values.get("HLG10"):
+		if not sp_transfer_characteristics:
+			test_content.mpd_bitstream_mismatch[1] \
+				+= 'AdaptationSet.SupplementalProperty -> TransferCharacteristics=<missing>;'
+			test_content.mpd_bitstream_mismatch[0] \
+				+= 'AdaptationSet.SupplementalProperty -> TransferCharacteristics=' + str(test_content.sei_pref_transfer_characteristics[1]) + ';'
+			
+	# Check representation
+	mpd_representation = mpd_info_root.findall('.//{*}Representation')[0]
+	if int(mpd_representation.get('width')) != test_content.resolution[1].horizontal:
+		test_content.mpd_bitstream_mismatch[1] += 'Representation@width='+str(mpd_representation.get('width'))+';'
+		test_content.mpd_bitstream_mismatch[0] += 'Representation@width='+str(test_content.resolution[1].horizontal)+';'
+		
+	if int(mpd_representation.get('height')) != test_content.resolution[1].vertical:
+		test_content.mpd_bitstream_mismatch[1] += 'Representation@height='+str(mpd_representation.get('height'))+';'
+		test_content.mpd_bitstream_mismatch[0] += 'Representation@height='+str(test_content.resolution[1].vertical)+';'
+		
+	if round(eval(mpd_representation.get('frameRate')), 3) != test_content.frame_rate[1]:
+		test_content.mpd_bitstream_mismatch[1] += 'Representation@frameRate='+str(mpd_representation.get('frameRate'))+';'
+		test_content.mpd_bitstream_mismatch[0] += 'Representation@frameRate='+str(test_content.frame_rate[1])+';'
+	
+	if eval(mpd_representation.get('sar').replace(':', '/')) != eval(test_content.pixel_aspect_ratio[1].replace(':', '/')):
+		test_content.mpd_bitstream_mismatch[1] += 'Representation@sar='+str(mpd_representation.get('sar'))+';'
+		test_content.mpd_bitstream_mismatch[0] += 'Representation@sar='+test_content.pixel_aspect_ratio[1]+';'
+	
 	# Use MP4Box to dump IsoMedia file box metadata for analysis
 	MP4Box_cl = ['MP4Box',
 		str(Path(test_content.test_file_path+sep+'1'+sep+TS_INIT_SEGMENT_NAME)),
@@ -1341,6 +1883,22 @@ def analyse_stream(test_content, frame_rate_family, debug_folder):
 		if mdhd_timescale[0] is not None:
 			file_timescale = int(mdhd_timescale[0])
 	
+	# Extract default sample duration and flags if defined in trex
+	trex_default_sample_duration = mp4_frag_info_root.findall('.//{*}TrackExtendsBox')[0].get("SampleDuration")
+	trex_dsf = mp4_frag_info_root.findall('.//{*}TrackExtendsBox')[0].findall('.//{*}DefaultSampleFlags')[0]
+	if trex_dsf is not None:
+		trex_default_sample_flags = (
+			trex_dsf.get("SamplePadding")
+			and trex_dsf.get("SampleSync")
+			and trex_dsf.get("SampleDegradationPriority")
+			and trex_dsf.get("IsLeading")
+			and trex_dsf.get("SampleDependsOn")
+			and trex_dsf.get("SampleIsDependedOn")
+			and trex_dsf.get("SampleHasRedundancy")
+		)
+	else:
+		trex_default_sample_flags = False
+	
 	file_stream_brands += [element.get("MajorBrand") for element in mp4_frag_info_root.iter('{*}FileTypeBox')]
 	file_stream_brands += [element.get("AlternateBrand") for element in mp4_frag_info_root.iter('{*}BrandEntry')]
 	test_content.file_brand[1] = ','.join(file_stream_brands)
@@ -1350,10 +1908,33 @@ def analyse_stream(test_content, frame_rate_family, debug_folder):
 		test_content.file_brand[2] = TestResult.PASS \
 			if (test_content.file_brand[1].find(test_content.file_brand[0]) > -1) \
 			else TestResult.FAIL
-	print('File brands = '+test_content.file_brand[1])
+	print('File brands = ' + test_content.file_brand[1])
 	
-	if len([element.get("content") for element in mp4_frag_info_root.iter('{*}SequenceParameterSet')]) == 0 \
-		and len([element.get("content") for element in mp4_frag_info_root.iter('{*}PictureParameterSet')]) == 0:
+	parameter_sets_present = False
+	if h264_detected:
+		if [element.get("content") for element in mp4_frag_info_root.iter('{*}SequenceParameterSet')]:
+			if [element.get("content") for element in mp4_frag_info_root.iter('{*}SequenceParameterSet')][0]\
+				.startswith('data:application/octet-string,' + hex(int('11' + bin(7)[2:].zfill(5), 2))[2:]) \
+				or [element.get("content") for element in mp4_frag_info_root.iter('{*}SequenceParameterSet')][0]\
+				.startswith('data:application/octet-string,' + hex(int('01' + bin(7)[2:].zfill(5), 2))[2:]):
+				parameter_sets_present = True
+		if [element.get("content") for element in mp4_frag_info_root.iter('{*}PictureParameterSet')]:
+			if [element.get("content") for element in mp4_frag_info_root.iter('{*}PictureParameterSet')][0] \
+					.startswith('data:application/octet-string,' + hex(int('11' + bin(8)[2:].zfill(5), 2))[2:]) \
+					or [element.get("content") for element in mp4_frag_info_root.iter('{*}PictureParameterSet')][0] \
+					.startswith('data:application/octet-string,' + hex(int('01' + bin(8)[2:].zfill(5), 2))[2:]):
+				parameter_sets_present = True
+	elif h265_detected:
+		if ('33' and '34') in [element.get("nalu_type") for element in mp4_frag_info_root.iter('{*}ParameterSetArray')]:
+			sps_index =	[element.get("nalu_type") for element in mp4_frag_info_root.iter('{*}ParameterSetArray')].index('33')
+			pps_index = [element.get("nalu_type") for element in mp4_frag_info_root.iter('{*}ParameterSetArray')].index('34')
+			if [element[0].get("content") for element in mp4_frag_info_root.iter('{*}ParameterSetArray')][sps_index].startswith(
+					'data:application/octet-string,' + hex(int('0' + bin(33)[2:] + '0', 2))[2:]) \
+				and [element[0].get("content") for element in mp4_frag_info_root.iter('{*}ParameterSetArray')][pps_index].startswith(
+					'data:application/octet-string,' + hex(int('0' + bin(34)[2:] + '0', 2))[2:]):
+				parameter_sets_present = True
+	
+	if not parameter_sets_present:
 		test_content.parameter_sets_in_cmaf_header_present[1] = False
 	else:
 		test_content.parameter_sets_in_cmaf_header_present[1] = True
@@ -1361,39 +1942,238 @@ def analyse_stream(test_content, frame_rate_family, debug_folder):
 		test_content.parameter_sets_in_cmaf_header_present[2] = TestResult.UNKNOWN
 	else:
 		test_content.parameter_sets_in_cmaf_header_present[2] = TestResult.PASS \
-			if (test_content.parameter_sets_in_cmaf_header_present[0] is test_content.parameter_sets_in_cmaf_header_present[1]) \
+			if (test_content.parameter_sets_in_cmaf_header_present[0] is
+				test_content.parameter_sets_in_cmaf_header_present[1]) \
 			else TestResult.FAIL
-	print('Parameter sets in CMAF header = '+str(test_content.parameter_sets_in_cmaf_header_present[1]))
+	print('Parameter sets in CMAF header = ' + str(test_content.parameter_sets_in_cmaf_header_present[1]))
 	
-	mp4_frag_info = etree.parse(str(Path(test_content.test_file_path+sep+'1'+sep+TS_FIRST_SEGMENT_NAME.split('.')[0]+TS_METADATA_POSTFIX)))
-	mp4_frag_info_root = mp4_frag_info.getroot()
-	file_samples_per_chunk = [element.get("SampleCount") for element in mp4_frag_info_root.iter('{*}TrackRunBox')]
-	file_samples_per_fragment = sum(map(int, file_samples_per_chunk))
-	file_chunks_per_fragment_mdat = sum(1 for element in mp4_frag_info_root.iter('{*}MediaDataBox'))
-	spc_count = Counter(file_samples_per_chunk)
-	print(str(file_samples_per_fragment) + ' samples per fragment, composed of:')
-	for spc_k, spc_v in spc_count.items():
-		print(str(spc_v) + ' chunk(s) with ' + str(spc_k) + ' sample(s)')
-	file_chunks_per_fragment = len(file_samples_per_chunk)
-	if file_chunks_per_fragment > 1:
-		if int(file_samples_per_chunk[0]) == 1:
-			test_content.chunks_per_fragment[1] = CmafChunksPerFragment.MULTIPLE_CHUNKS_ARE_SAMPLES
-		else:
-			test_content.chunks_per_fragment[1] = CmafChunksPerFragment.MULTIPLE
+	# Verify MPD and segment duration are valid
+	print('Extracting SampleDuration from every TrackFragmentHeaderBox... ')
+	
+	seg_files = os.listdir(str(Path(test_content.test_file_path + sep + '1' + sep)))
+	for m4s in seg_files:
+		if m4s.endswith('.m4s'):
+			file_total_fragments += 1
+			MP4Box_cl2 = ['MP4Box',
+						  str(Path(test_content.test_file_path + sep + '1' + sep + m4s)),
+						  '-init-seg',
+						  str(Path(test_content.test_file_path + sep + '1' + sep + TS_INIT_SEGMENT_NAME)),
+						  '-diso']
+			# print('Running MP4Box to dump IsoMedia file box metadata from segment to XML...')
+			subprocess.run(MP4Box_cl2)
+			mp4_frag_info = etree.parse(str(Path(
+				test_content.test_file_path + sep + '1' + sep + m4s.split('.')[
+					0] + TS_METADATA_POSTFIX)))
+			mp4_frag_info_root = mp4_frag_info.getroot()
+			
+			# Variable for counting all sample duration values
+			tfhd_sample_duration = []
+			trun_sample_duration = []
+			trun_trune_sample_duration = []
+			
+			traf_list = mp4_frag_info_root.findall('.//{*}TrackFragmentBox')
+			for i, traf in enumerate(traf_list):
+				duration_added = False
+				tfhd = traf.findall('.//{*}TrackFragmentHeaderBox')[0]
+				# check TrackFragmentHeaderBox@SampleDescriptionIndex=1
+				if tfhd.get("SampleDescriptionIndex"):
+					file_tfhd_sample_description_index_present.append(bool(int(tfhd.get("SampleDescriptionIndex"))==1))
+				# check TrackFragmentHeaderBox@SampleDuration
+				if tfhd.get("SampleDuration"):
+					file_tfhd_sample_duration_present.append(bool(tfhd.get("SampleDuration")))
+					tfhd_sample_duration.append(tfhd.get("SampleDuration"))
+				# check TrackFragmentHeaderBox@SampleSize
+				file_tfhd_sample_size_present.append(bool(tfhd.get("SampleSize")))
+				# check flags (SamplePadding Sync DegradationPriority IsLeading DependsOn IsDependedOn HasRedundancy)
+				file_tfhd_default_sample_flags_present.append(bool(
+					tfhd.get("SamplePadding") and tfhd.get("Sync") and tfhd.get("DegradationPriority")
+					and tfhd.get("IsLeading") and tfhd.get("DependsOn") and tfhd.get("IsDependedOn")
+					and tfhd.get("HasRedundancy")))
+				
+				trun = traf.findall('.//{*}TrackRunBox')[0]
+				# check TrackRunBox@Version=1 for video CMAF Tracks not contained in Track Files
+				if trun.get("Version"):
+					file_trun_version.append(bool(int(trun.get("Version"))==1))
+				# check TrackRunBox@SampleDuration
+				if trun.get("SampleDuration"):
+					file_trun_sample_duration_present.append(bool(trun.get("SampleDuration")))
+					trun_sample_duration.append(trun.get("SampleDuration"))
+				# check flags (SamplePadding Sync DegradationPriority IsLeading DependsOn IsDependedOn HasRedundancy)
+				file_trun_sample_flags_present.append(bool(
+					trun.get("SamplePadding") and trun.get("Sync") and trun.get("DegradationPriority")
+					and trun.get("IsLeading") and trun.get("DependsOn") and trun.get("IsDependedOn")
+					and trun.get("HasRedundancy")))
+				
+				trune_list = trun.findall('.//{*}TrackRunEntry')
+				trun_trune_sample_duration_present = []
+				trune_sample_duration = []
+				trun_trune_sample_size_present = []
+				trun_trune_sample_flags_present = []
+				
+				# check TrackRunBoxEntry@SampleDuration,Size and flags
+				# and calculate total sample duration
+				duration_added = False
+				for j, trune in enumerate(trune_list):
+					# check TrackRunEntry@SampleDuration
+					if trune.get("SampleDuration"):
+						trun_trune_sample_duration_present.append(bool(trune.get("SampleDuration")))
+						trune_sample_duration.append(trune.get("SampleDuration"))
+						file_tot_sample_duration += int(trune.get("SampleDuration")) / int(file_timescale)
+						duration_added = True
+					# check TrackRunEntry@Size
+					trun_trune_sample_size_present.append(bool(trune.get("Size")))
+					# check TrackRunEntry flags
+					trun_trune_sample_flags_present.append(bool(
+						trune.get("SamplePadding") and trune.get("Sync") and trune.get("DegradationPriority")
+						and trune.get("IsLeading") and trune.get("DependsOn") and trune.get("IsDependedOn")
+						and trune.get("HasRedundancy")))
+				if not duration_added:
+					s_count = trun.get("SampleCount")
+					if trun.get("SampleDuration"):
+						file_tot_sample_duration += int(trun.get("SampleDuration")) * int(s_count) / int(file_timescale)
+					elif tfhd.get("SampleDuration"):
+						file_tot_sample_duration += int(tfhd.get("SampleDuration")) * int(s_count) / int(file_timescale)
+					elif trex_default_sample_duration:
+						file_tot_sample_duration += int(trex_default_sample_duration) * int(s_count) / int(file_timescale)
+				
+				file_trune_sample_duration_present.append(sum(trun_trune_sample_duration_present)==len(trun_trune_sample_duration_present))
+				if trune_sample_duration:
+					trun_trune_sample_duration.append(trune_sample_duration)
+				file_trune_sample_size_present.append(sum(trun_trune_sample_size_present)==len(trun_trune_sample_size_present))
+				file_trune_sample_flags_present.append(sum(trun_trune_sample_flags_present)==len(trun_trune_sample_flags_present))
+			
+			# Sample duration, sample size and flags are set in tfhd or trun (TrackRunBox & TrackRunEntry)
+			description_index_present = \
+				(sum(file_tfhd_sample_description_index_present) == len(file_tfhd_sample_description_index_present))
+			duration_present = \
+				(sum(file_tfhd_sample_duration_present) == len(file_tfhd_sample_duration_present)) \
+				or (sum(file_trun_sample_duration_present) == len(file_trun_sample_duration_present)) \
+				or (sum(file_trune_sample_duration_present) == len(file_trune_sample_duration_present))
+			size_present = \
+				(sum(file_tfhd_sample_size_present) == len(file_tfhd_sample_size_present)) \
+				or (sum(file_trune_sample_size_present) == len(file_trune_sample_size_present))
+			flags_present = \
+				(sum(file_tfhd_default_sample_flags_present) == len(file_tfhd_default_sample_flags_present)) \
+				or (sum(file_trun_sample_flags_present) == len(file_trun_sample_flags_present)) \
+				or (sum(file_trune_sample_flags_present) == len(file_trune_sample_flags_present))
+			# TrackRunBox@Version=1 for video CMAF Tracks not contained in Track Files
+			trun_version_present = \
+				(sum(file_trun_version) == len(file_trun_version))
+			
+			test_content.cmf2_sample_flags_present[1] = (description_index_present
+											and duration_present and size_present and flags_present
+											and trun_version_present)
+			
+			# Flags and sample parameters (duration, size, sample description index) and trun@Version=1
+			# determine CMAF Brand 'cmf2'
+			if test_content.cmf2_sample_flags_present[0] == '':
+				# When undefined ensure consistency with the brand in case it is 'cmf2'
+				if 'cmf2' in test_content.file_brand[1]:
+					test_content.cmf2_sample_flags_present[0] = True
+					test_content.cmf2_sample_flags_present[2] = TestResult.NOT_APPLICABLE if test_content.cmf2_sample_flags_present[1] \
+						else TestResult.FAIL
+				else:
+					test_content.cmf2_sample_flags_present[2] = TestResult.NOT_APPLICABLE
+			else:
+				test_content.cmf2_sample_flags_present[2] = TestResult.PASS \
+					if test_content.cmf2_sample_flags_present[0] == test_content.cmf2_sample_flags_present[1] \
+					else TestResult.FAIL
+						
+			file_samples_per_chunk = [element.get("SampleCount") for element in
+										  mp4_frag_info_root.iter('{*}TrackRunBox')]
+			file_samples_per_fragment = sum(map(int, file_samples_per_chunk))
+			file_total_samples += file_samples_per_fragment
+			file_chunks_per_fragment_mdat = sum(1 for element in mp4_frag_info_root.iter('{*}MediaDataBox'))
+			spc_count = Counter(file_samples_per_chunk)
+			print(str(file_samples_per_fragment) + ' samples per fragment, composed of:')
+			for spc_k, spc_v in spc_count.items():
+				print(str(spc_v) + ' chunk(s) with ' + str(spc_k) + ' sample(s)')
+			file_chunks_per_fragment = len(file_samples_per_chunk)
+			if test_content.chunks_per_fragment[2] == TestResult.NOT_TESTED or test_content.chunks_per_fragment[2] == TestResult.PASS:
+				if file_chunks_per_fragment > 1:
+					if int(file_samples_per_chunk[0]) == 1:
+						if test_content.chunks_per_fragment[1] != '' and test_content.chunks_per_fragment[1] != CmafChunksPerFragment.MULTIPLE_CHUNKS_ARE_SAMPLES:
+							test_content.chunks_per_fragment[1] = CmafChunksPerFragment.MIX
+						else:
+							test_content.chunks_per_fragment[1] = CmafChunksPerFragment.MULTIPLE_CHUNKS_ARE_SAMPLES
+					else:
+						if test_content.chunks_per_fragment[1] != '' and test_content.chunks_per_fragment[1] != CmafChunksPerFragment.MULTIPLE:
+							test_content.chunks_per_fragment[1] = CmafChunksPerFragment.MIX
+						else:
+							test_content.chunks_per_fragment[1] = CmafChunksPerFragment.MULTIPLE
+				else:
+					if test_content.chunks_per_fragment[1] != '' and test_content.chunks_per_fragment[1] != CmafChunksPerFragment.SINGLE:
+						test_content.chunks_per_fragment[1] = CmafChunksPerFragment.MIX
+					else:
+						test_content.chunks_per_fragment[1] = CmafChunksPerFragment.SINGLE
+				if test_content.chunks_per_fragment[0] == '':
+					test_content.chunks_per_fragment[2] = TestResult.UNKNOWN
+				else:
+					test_content.chunks_per_fragment[2] = TestResult.PASS \
+						if (test_content.chunks_per_fragment[0] is test_content.chunks_per_fragment[1]
+							and file_chunks_per_fragment == file_chunks_per_fragment_mdat) \
+						else TestResult.FAIL
+			
+			print('Chunks per fragment = moof=' + str(file_chunks_per_fragment) + ' mdat=' + str(
+				file_chunks_per_fragment_mdat) + ' (' + str(test_content.chunks_per_fragment[1].value) + ')')
+	
+	print('Found '+str(file_total_fragments)+' fragment m4s files')
+	
+	print('cmfc = ' + str(bool('cmfc' in test_content.file_brand[1])))
+	print('default sample duration and flags (in trex) = ' + str(bool(not test_content.cmf2_sample_flags_present[1] \
+																	  and trex_default_sample_duration \
+																	  and trex_default_sample_flags)))
+	print('cmf2 = ' + str(bool('cmf2' in test_content.file_brand[1])))
+	print('flags and sample parameters (duration, size, sample description index) and trun@Version=1 = ' + str(
+		bool(test_content.cmf2_sample_flags_present[1])))
+	
+	# Complete MPD AdaptatationSet checks
+	if (test_content.cmf2_sample_flags_present[0] and 'cmf2' not in mpd_adaptation_set.get('containerProfiles')) \
+			or (
+			not test_content.cmf2_sample_flags_present[0] and 'cmf2' in mpd_adaptation_set.get('containerProfiles')):
+		test_content.mpd_bitstream_mismatch[1] += 'AdaptationSet@containerProfiles=' + str(
+			mpd_adaptation_set.get('containerProfiles')) + ';'
+		test_content.mpd_bitstream_mismatch[0] += 'AdaptationSet@containerProfiles=' + str(
+			test_content.file_brand[0]) + ';'
+	# Set MPD mismatch result
+	test_content.mpd_bitstream_mismatch[2] = TestResult.PASS \
+		if test_content.mpd_bitstream_mismatch[1] == '' \
+		else TestResult.FAIL
+	
+	if test_content.mpd_sample_duration_delta[0] == '':
+		test_content.mpd_sample_duration_delta[2] = TestResult.UNKNOWN
 	else:
-		test_content.chunks_per_fragment[1] = CmafChunksPerFragment.SINGLE
-	if test_content.chunks_per_fragment[0] == 0:
-		test_content.chunks_per_fragment[2] = TestResult.UNKNOWN
-	else:
-		test_content.chunks_per_fragment[2] = TestResult.PASS \
-			if (test_content.chunks_per_fragment[0] is test_content.chunks_per_fragment[1]
-				and file_chunks_per_fragment == file_chunks_per_fragment_mdat) \
+		# Adapt the frame rate now that we know the frame rate family
+		# Expect delta between MPD mediaPresentationDuration and total sample duration to be less than the duration of 1 frame
+		mpd_sample_duration_delta_expected = 0
+		if frame_rate_family == TS_LOCATION_FRAME_RATES_50:
+			mpd_sample_duration_delta_expected = round(1 / frame_rate_value_50.get(
+				1 / test_content.mpd_sample_duration_delta[0]), 4)
+			test_content.mpd_sample_duration_delta[0] = '<' + str(mpd_sample_duration_delta_expected)
+		elif frame_rate_family == TS_LOCATION_FRAME_RATES_59_94:
+			mpd_sample_duration_delta_expected = round(1 / frame_rate_value_59_94.get(
+				1 / test_content.mpd_sample_duration_delta[0]), 4)
+			test_content.mpd_sample_duration_delta[0] = '<' + str(mpd_sample_duration_delta_expected)
+		elif frame_rate_family == TS_LOCATION_FRAME_RATES_60:
+			mpd_sample_duration_delta_expected = round(1 / frame_rate_value_60.get(
+				1 / test_content.mpd_sample_duration_delta[0]), 4)
+			test_content.mpd_sample_duration_delta[0] = '<' + str(mpd_sample_duration_delta_expected)
+		# Save result
+		test_content.mpd_sample_duration_delta[1] = round(
+			abs(file_tot_sample_duration - mpd_media_presentation_duration), 4)
+		# Determine test result
+		test_content.mpd_sample_duration_delta[2] = TestResult.PASS \
+			if (mpd_sample_duration_delta_expected > test_content.mpd_sample_duration_delta[1]) \
 			else TestResult.FAIL
-	print('Chunks per fragment = moof='+str(file_chunks_per_fragment)+' mdat='+str(file_chunks_per_fragment_mdat)+' ('+str(test_content.chunks_per_fragment[1].value)+')')
+	
+	print("Done")
+	print("Total number of samples = " + str(file_total_samples))
+	print("Total sample duration = " + str(file_tot_sample_duration))
+	print("MPD mediaPresentationDuration = " + str(mpd_media_presentation_duration))
 	
 	if file_frame_rate != '':
 		test_content.cmaf_fragment_duration[1] = \
-			round(float(eval(str(file_samples_per_fragment)+'/'+str(file_frame_rate))), 1)
+			round(float(eval(str(file_total_samples)+'/'+str(file_total_fragments)+'/'+str(file_frame_rate))), 2)
 		if test_content.cmaf_fragment_duration[0] == 0:
 			test_content.cmaf_fragment_duration[2] = TestResult.UNKNOWN
 		else:
@@ -1401,20 +2181,8 @@ def analyse_stream(test_content, frame_rate_family, debug_folder):
 				if (test_content.cmaf_fragment_duration[0] == test_content.cmaf_fragment_duration[1]) \
 				else TestResult.FAIL
 		print('Fragment duration = '+str(test_content.cmaf_fragment_duration[1])+' seconds')
-		if test_content.cmaf_fragment_duration[1] != 0:
-			print('Number of fragments = '+str(int(eval(str(test_content.duration[1])+'/'+str(test_content.cmaf_fragment_duration[1])))))
-		else:
-			print('Number of fragments = cannot be computed (cmaf_fragment_duration[1] equals 0)')
 	else:
 		test_content.cmaf_fragment_duration[2] = TestResult.NOT_TESTABLE
-	
-	# Cursory check that all fragments are present
-	nb_fragment_files_found = 0
-	stream_folder_contents = os.listdir(str(Path(test_content.test_file_path+sep+'1'+sep)))
-	for item in stream_folder_contents:
-		if item.endswith('.m4s'):
-			nb_fragment_files_found += 1
-	print('Found '+str(nb_fragment_files_found)+' fragment m4s files')
 	
 	# Check frame types (I/P/B) present in stream
 	j = 0
@@ -1435,6 +2203,41 @@ def analyse_stream(test_content, frame_rate_family, debug_folder):
 				elif stype == 1 or stype == 6:
 					file_sample_b_frames += 1
 				j += 1
+		for ntype, stype in nal_slice_types:
+			if h264_detected:
+				if stype == 2 or stype == 7:
+					file_stream_i_frames += 1
+				elif stype == 0 or stype == 5:
+					file_stream_p_frames += 1
+				elif stype == 1 or stype == 6:
+					file_stream_b_frames += 1
+				# Check frame types (I/P/B) present in first fragment if frame rate known
+				if file_frame_rate != '':
+					if j < (test_content.cmaf_fragment_duration[1]*file_frame_rate):
+						if stype == 2 or stype == 7:
+							file_sample_i_frames += 1
+						elif stype == 0 or stype == 5:
+							file_sample_p_frames += 1
+						elif stype == 1 or stype == 6:
+							file_sample_b_frames += 1
+						j += 1
+			elif h265_detected:
+				if stype == 2:
+					file_stream_i_frames += 1
+				elif stype == 1:
+					file_stream_p_frames += 1
+				elif stype == 0:
+					file_stream_b_frames += 1
+				# Check frame types (I/P/B) present in first fragment if frame rate known
+				if file_frame_rate != '':
+					if j < (test_content.cmaf_fragment_duration[1]*file_frame_rate):
+						if stype == 2:
+							file_sample_i_frames += 1
+						elif stype == 1:
+							file_sample_p_frames += 1
+						elif stype == 0:
+							file_sample_b_frames += 1
+						j += 1
 		
 	print('Stream i-frames = '+str(file_stream_i_frames))
 	print('Stream p-frames = '+str(file_stream_p_frames))
@@ -1638,19 +2441,24 @@ if __name__ == "__main__":
 	parser = argparse.ArgumentParser(description="WAVE Mezzanine Test Vector Content Options Validator.")
 	
 	parser.add_argument(
+		'-c', '--codec',
+		required=False,
+		help="Specifies the Test Vector codec (Default: AVC).")
+	
+	parser.add_argument(
 		'-m', '--matrix',
 		required=False,
 		help="Specifies a CSV or Excel file that contains the test content matrix, "
-			"with the expected content options for each test stream. "
-			"(Default: downloads latest matrix CSV for AVC from Google Docs here: "+MATRIX_AVC+").")
-		
+			 "with the expected content options for each test stream. "
+			 "(Default: downloads latest matrix CSV for AVC from Google Docs here: "+MATRIX_AVC+").")
+	
 	parser.add_argument(
 		'-v', '--vectors',
 		required=True,
 		help="Folder containing subfolders with sets of test vectors for a specific codec e.g. \"cfhd_sets\", "
-			"that contain subfolders for each frame rate family e.g. \"15_30_60\", "
-			"that contain subfolders t1 .. tN with the test vectors to validate. "
-			"Example of path to test vector MPD: <vectors>/cfhd_sets/15_30_60/t1/2022-09-23/stream.mpd")
+			 "that contain subfolders for each frame rate family e.g. \"15_30_60\", "
+			 "that contain subfolders t1 .. tN with the test vectors to validate. "
+			 "Example of path to test vector MPD: <vectors>/cfhd_sets/15_30_60/t1/2022-09-23/stream.mpd")
 	
 	parser.add_argument(
 		'--mezzanineversion',
@@ -1676,9 +2484,15 @@ if __name__ == "__main__":
 	
 	args = parser.parse_args()
 	
+	if args.codec is not None:
+		if args.codec.lower() not in set(cmaf_brand_codecs.values()):
+			sys.exit("Test vector codec \"" + str(args.codec) + "\" does not have a known WAVE media profile as of "+WAVE_CONTENT_SPEC+".")
+		else:
+			codec = args.codec
+	
 	tc_matrix = ''
 	if args.matrix is not None:
-		tc_matrix = Path(args.matrix)
+		tc_matrix = Path(args.matrix).resolve()
 	else:
 		http_request = urllib.request.Request(url=MATRIX_AVC, unverifiable=True)
 		req_file = urllib.request.urlopen(http_request, timeout=10)
@@ -1687,7 +2501,7 @@ if __name__ == "__main__":
 	
 	tc_vectors_folder = ''
 	if args.vectors is not None:
-		tc_vectors_folder = Path(args.vectors)
+		tc_vectors_folder = Path(args.vectors).resolve()
 	
 	HTTPD_PATH = str(tc_vectors_folder)
 	
@@ -1700,7 +2514,7 @@ if __name__ == "__main__":
 	# Check CSV matrix file exists
 	if not os.path.isfile(tc_matrix):
 		sys.exit("Test content matrix file \""+str(tc_matrix)+"\" does not exist.")
-		
+	
 	# Check vectors folder exists
 	if not os.path.isdir(tc_vectors_folder):
 		sys.exit("Test vectors folder \""+str(tc_vectors_folder)+"\" does not exist")
@@ -1764,99 +2578,291 @@ if __name__ == "__main__":
 			tc_matrix_data.append(row)
 	csv_file.close()
 	
-	# Extract expected test stream parameters
+	# Extract expected test stream parameters (CSV structure depends on codec)
+	
 	tc_matrix_ts_start = 0
 	tc_matrix_ts_root = [0, 0]
 	tc_num_streams = 0
 	for i, row in enumerate(tc_matrix_data):
 		if TS_START in row:
-			tc_matrix_ts_start = row.index(TS_START)
+			tc_matrix_ts_start = row.index(TS_START)  # Column containing data on first test vector
 		if tc_matrix_ts_start != 0:
 			tc_matrix_ts_root = [i, tc_matrix_ts_start]
-			tc_num_streams = len(tc_matrix_data[tc_matrix_ts_root[0]+1][tc_matrix_ts_root[1]:])
+			tc_num_streams = sum(1 for c in tc_matrix_data[tc_matrix_ts_root[0]+1][tc_matrix_ts_root[1]:] if c !='')
 			break
 	
 	test_content = []
 	
-	for i in range(0, tc_num_streams):
-		i_file_brand = tc_matrix_data[tc_matrix_ts_root[0] + TS_DEFINITION_ROW_OFFSET + 11][tc_matrix_ts_root[1] + i]
-		
-		i_parameter_sets_in_cmaf_header_present = True
-		if tc_matrix_data[tc_matrix_ts_root[0]+TS_DEFINITION_ROW_OFFSET+2][tc_matrix_ts_root[1]+i].find('without parameter sets within the CMAF header') > -1:
-			i_parameter_sets_in_cmaf_header_present = False
-		
-		i_parameter_sets_in_band_present = False
-		if tc_matrix_data[tc_matrix_ts_root[0]+TS_DEFINITION_ROW_OFFSET+2][tc_matrix_ts_root[1]+i].find('in-band parameter sets') > -1:
-			i_parameter_sets_in_band_present = True
+	# Initialise variables not used by all codecs
+	i_vui_primaries_mcoeffs = ''
+	i_vui_transfer_characteristics = ''
+	i_sei_pref_transfer_characteristics = ''
+	i_cmf2_sample_flags_present = ''
+	
+	if codec == 'avc':
+		for i in range(0, tc_num_streams):
+			# print(str(i+1)+' of '+str(tc_num_streams))
+			# print(tc_matrix_data[tc_matrix_ts_root[0]+TS_DEFINITION_ROW_OFFSET-2][tc_matrix_ts_root[1]+i])
 			
-		i_picture_timing_sei_present = False
-		if tc_matrix_data[tc_matrix_ts_root[0]+TS_DEFINITION_ROW_OFFSET][tc_matrix_ts_root[1]+i] == 'With':
-			i_picture_timing_sei_present = True
-		
-		i_vui_timing_present = False
-		if tc_matrix_data[tc_matrix_ts_root[0]+TS_DEFINITION_ROW_OFFSET+1][tc_matrix_ts_root[1]+i] == 'With':
-			i_vui_timing_present = True
+			i_mezzanine_label = tc_matrix_data[tc_matrix_ts_root[0] + TS_DEFINITION_ROW_OFFSET + 14][tc_matrix_ts_root[1] + i]
 			
-		i_cmaf_initialisation_constraints = CmafInitConstraints.MULTIPLE
-		if tc_matrix_data[tc_matrix_ts_root[0]+TS_DEFINITION_ROW_OFFSET+4][tc_matrix_ts_root[1]+i].find('Single') > -1:
-			i_cmaf_initialisation_constraints = CmafInitConstraints.SINGLE
+			i_file_brand = tc_matrix_data[tc_matrix_ts_root[0] + TS_DEFINITION_ROW_OFFSET + 11][tc_matrix_ts_root[1] + i]
 			
-		i_chunks_per_fragment = CmafChunksPerFragment.SINGLE
-		if tc_matrix_data[tc_matrix_ts_root[0]+TS_DEFINITION_ROW_OFFSET+5][tc_matrix_ts_root[1]+i].find('multiple chunks') > -1:
-			i_chunks_per_fragment = CmafChunksPerFragment.MULTIPLE
-		elif tc_matrix_data[tc_matrix_ts_root[0]+TS_DEFINITION_ROW_OFFSET+5][tc_matrix_ts_root[1]+i].find('Each sample') > -1:
-			i_chunks_per_fragment = CmafChunksPerFragment.MULTIPLE_CHUNKS_ARE_SAMPLES
+			i_parameter_sets_in_cmaf_header_present = True
+			if tc_matrix_data[tc_matrix_ts_root[0]+TS_DEFINITION_ROW_OFFSET+2][tc_matrix_ts_root[1]+i].find('without parameter sets within the CMAF header') > -1:
+				i_parameter_sets_in_cmaf_header_present = False
 			
-		i_b_frames_present = TestResult.NOT_APPLICABLE
-		if tc_matrix_data[tc_matrix_ts_root[0]+TS_DEFINITION_ROW_OFFSET+5][tc_matrix_ts_root[1]+i].find('p-frame only') > -1:
-			i_b_frames_present = False
-		elif tc_matrix_data[tc_matrix_ts_root[0]+TS_DEFINITION_ROW_OFFSET+5][tc_matrix_ts_root[1]+i].find('with b-frames') > -1:
-			i_b_frames_present = True
+			i_parameter_sets_in_band_present = False
+			if tc_matrix_data[tc_matrix_ts_root[0]+TS_DEFINITION_ROW_OFFSET+2][tc_matrix_ts_root[1]+i].find('in-band parameter sets') > -1:
+				i_parameter_sets_in_band_present = True
 			
-		h_res = (lambda x: int(tc_matrix_data[tc_matrix_ts_root[0]+TS_DEFINITION_ROW_OFFSET+6][tc_matrix_ts_root[1]+i].split('x')[0])
-				if x.isdigit() else 0)(tc_matrix_data[tc_matrix_ts_root[0]+TS_DEFINITION_ROW_OFFSET+6][tc_matrix_ts_root[1]+i].split('x')[0])
-		v_res = (lambda x: int(tc_matrix_data[tc_matrix_ts_root[0]+TS_DEFINITION_ROW_OFFSET+6][tc_matrix_ts_root[1]+i].split('x')[1])
-				if x.isdigit() else 0)(tc_matrix_data[tc_matrix_ts_root[0]+TS_DEFINITION_ROW_OFFSET+6][tc_matrix_ts_root[1]+i].split('x')[1])
-		i_resolution = VideoResolution(h_res, v_res)
-		
-		i_frame_rate = (lambda x: float(tc_matrix_data[tc_matrix_ts_root[0]+TS_DEFINITION_ROW_OFFSET+7][tc_matrix_ts_root[1]+i])
-				if x.replace(".", "", 1).isdigit() else 0)(tc_matrix_data[tc_matrix_ts_root[0]+TS_DEFINITION_ROW_OFFSET+7][tc_matrix_ts_root[1]+i])
-		
-		i_duration = (lambda x: int(tc_matrix_data[tc_matrix_ts_root[0]+TS_DEFINITION_ROW_OFFSET+9][tc_matrix_ts_root[1]+i][:-1])
-				if x.isdigit() else 0)(tc_matrix_data[tc_matrix_ts_root[0]+TS_DEFINITION_ROW_OFFSET+9][tc_matrix_ts_root[1]+i][:-1])
-		
-		i_tc = TestContent(tc_matrix_data[tc_matrix_ts_root[0]+1][tc_matrix_ts_root[1]+i],  # test_stream_id
-			'',  # test_file_path
-			mezzanine_version,  # mezzanine version
-			str(h_res)+'x'+str(v_res)+'@'+str(i_frame_rate)+'_'+str(i_duration),  # format as encoded in the mezzanine filename
-			'',  # conformance_test_result
-			cmaf_brand_codecs.get(i_file_brand, 'unknown'),  # codec_name
-			(lambda x: tc_matrix_data[tc_matrix_ts_root[0]+TS_DEFINITION_ROW_OFFSET+10][tc_matrix_ts_root[1]+i].split(' ')[0]
-				if len(x) > 1 else '')(tc_matrix_data[tc_matrix_ts_root[0]+TS_DEFINITION_ROW_OFFSET+10][tc_matrix_ts_root[1]+i].split(' ')),  # codec_profile
-			(lambda x: tc_matrix_data[tc_matrix_ts_root[0]+TS_DEFINITION_ROW_OFFSET+10][tc_matrix_ts_root[1]+i].split(' ')[1]
-				if len(x) > 1 else tc_matrix_data[tc_matrix_ts_root[0]+TS_DEFINITION_ROW_OFFSET+10][tc_matrix_ts_root[1]+i])
-						(tc_matrix_data[tc_matrix_ts_root[0]+TS_DEFINITION_ROW_OFFSET+10][tc_matrix_ts_root[1]+i].split(' ')),  # codec_level
-			(lambda x: tc_matrix_data[tc_matrix_ts_root[0]+TS_DEFINITION_ROW_OFFSET+10][tc_matrix_ts_root[1]+i].split(' ')[2]
-				if len(x) > 2 else '')(tc_matrix_data[tc_matrix_ts_root[0]+TS_DEFINITION_ROW_OFFSET+10][tc_matrix_ts_root[1]+i].split(' ')),  # codec_tier
-			i_file_brand,  # file_brand
-			tc_matrix_data[tc_matrix_ts_root[0]+TS_DEFINITION_ROW_OFFSET+2][tc_matrix_ts_root[1]+i][0:4],  # sample_entry_type
-			i_parameter_sets_in_cmaf_header_present,  # parameter_sets_in_cmaf_header_present
-			i_parameter_sets_in_band_present,  # parameter_sets_in_band_present
-			i_picture_timing_sei_present,  # picture_timing_sei_present
-			i_vui_timing_present,  # vui_timing_present
-			float(tc_matrix_data[tc_matrix_ts_root[0]+TS_DEFINITION_ROW_OFFSET+3][tc_matrix_ts_root[1]+i]),  # cmaf_fragment_duration in s
-			i_cmaf_initialisation_constraints,  # cmaf_initialisation_constraints
-			i_chunks_per_fragment,  # chunks_per_fragment
-			i_b_frames_present,  # b_frames_present
-			i_resolution,  # resolution
-			i_frame_rate,  # frame_rate
-			(lambda x: int(tc_matrix_data[tc_matrix_ts_root[0]+TS_DEFINITION_ROW_OFFSET+8][tc_matrix_ts_root[1]+i])
-				if x.isdigit() else 0)(tc_matrix_data[tc_matrix_ts_root[0]+TS_DEFINITION_ROW_OFFSET+8][tc_matrix_ts_root[1]+i]),  # bit rate in kb/s
-			i_duration,  # duration in s
-			1/i_frame_rate  # Maximum allowable delta between MPD mediaPresentationDuration and total sample duration
-			)
-		test_content.append(i_tc)
+			i_picture_timing_sei_present = False
+			if tc_matrix_data[tc_matrix_ts_root[0]+TS_DEFINITION_ROW_OFFSET][tc_matrix_ts_root[1]+i] == 'With':
+				i_picture_timing_sei_present = True
+			
+			i_vui_timing_present = False
+			if tc_matrix_data[tc_matrix_ts_root[0]+TS_DEFINITION_ROW_OFFSET+1][tc_matrix_ts_root[1]+i] == 'With':
+				i_vui_timing_present = True
+			
+			i_cmaf_initialisation_constraints = CmafInitConstraints.MULTIPLE
+			if tc_matrix_data[tc_matrix_ts_root[0]+TS_DEFINITION_ROW_OFFSET+4][tc_matrix_ts_root[1]+i].find('Single') > -1:
+				i_cmaf_initialisation_constraints = CmafInitConstraints.SINGLE
+			
+			i_chunks_per_fragment = CmafChunksPerFragment.SINGLE
+			if tc_matrix_data[tc_matrix_ts_root[0]+TS_DEFINITION_ROW_OFFSET+5][tc_matrix_ts_root[1]+i].find('multiple chunks') > -1:
+				i_chunks_per_fragment = CmafChunksPerFragment.MULTIPLE
+			elif tc_matrix_data[tc_matrix_ts_root[0]+TS_DEFINITION_ROW_OFFSET+5][tc_matrix_ts_root[1]+i].find('Each sample') > -1:
+				i_chunks_per_fragment = CmafChunksPerFragment.MULTIPLE_CHUNKS_ARE_SAMPLES
+			
+			i_b_frames_present = TestResult.NOT_APPLICABLE
+			if tc_matrix_data[tc_matrix_ts_root[0]+TS_DEFINITION_ROW_OFFSET+5][tc_matrix_ts_root[1]+i].find('p-frame only') > -1:
+				i_b_frames_present = False
+			elif tc_matrix_data[tc_matrix_ts_root[0]+TS_DEFINITION_ROW_OFFSET+5][tc_matrix_ts_root[1]+i].find('with b-frames') > -1:
+				i_b_frames_present = True
+			
+			h_res = (lambda x: int(tc_matrix_data[tc_matrix_ts_root[0]+TS_DEFINITION_ROW_OFFSET+6][tc_matrix_ts_root[1]+i].split('x')[0])
+			if x.isdigit() else 0)(tc_matrix_data[tc_matrix_ts_root[0]+TS_DEFINITION_ROW_OFFSET+6][tc_matrix_ts_root[1]+i].split('x')[0])
+			v_res = (lambda x: int(tc_matrix_data[tc_matrix_ts_root[0]+TS_DEFINITION_ROW_OFFSET+6][tc_matrix_ts_root[1]+i].split('x')[1])
+			if x.isdigit() else 0)(tc_matrix_data[tc_matrix_ts_root[0]+TS_DEFINITION_ROW_OFFSET+6][tc_matrix_ts_root[1]+i].split('x')[1])
+			i_resolution = VideoResolution(h_res, v_res)
+			
+			i_frame_rate = (lambda x: float(tc_matrix_data[tc_matrix_ts_root[0]+TS_DEFINITION_ROW_OFFSET+7][tc_matrix_ts_root[1]+i])
+			if x.replace(".", "", 1).isdigit() else 0)(tc_matrix_data[tc_matrix_ts_root[0]+TS_DEFINITION_ROW_OFFSET+7][tc_matrix_ts_root[1]+i])
+			
+			i_bit_rate = (lambda x: int(tc_matrix_data[tc_matrix_ts_root[0] + TS_DEFINITION_ROW_OFFSET + 8][tc_matrix_ts_root[1] + i])
+			if x.isdigit() else TestResult.NOT_APPLICABLE)(
+				tc_matrix_data[tc_matrix_ts_root[0] + TS_DEFINITION_ROW_OFFSET + 8][tc_matrix_ts_root[1] + i])
+			
+			i_duration = (lambda x: float(tc_matrix_data[tc_matrix_ts_root[0]+TS_DEFINITION_ROW_OFFSET+9][tc_matrix_ts_root[1]+i][:-1])
+			if x.replace(".", "", 1).isdigit() else 0)(tc_matrix_data[tc_matrix_ts_root[0]+TS_DEFINITION_ROW_OFFSET+9][tc_matrix_ts_root[1]+i][:-1])
+			
+			if str(i_duration)[-2:] == '.0':
+				i_duration = int(i_duration)
+			
+			i_tc = TestContent(tc_matrix_data[tc_matrix_ts_root[0]+1][tc_matrix_ts_root[1]+i],  # test_stream_id
+							   '',  # test_file_path
+							   mezzanine_version,  # mezzanine version
+							   str(h_res)+'x'+str(v_res)+'@'+str(i_frame_rate)+'_'+str('{0:g}'.format(i_duration)),  # format as encoded in the mezzanine filename
+							   i_mezzanine_label,  # mezzanine label
+							   {"verdict": "NOT TESTED"},  # conformance_test_result
+							   cmaf_brand_codecs.get(i_file_brand, 'unknown'),  # codec_name
+							   (lambda x: tc_matrix_data[tc_matrix_ts_root[0]+TS_DEFINITION_ROW_OFFSET+10][tc_matrix_ts_root[1]+i].split(' ')[0]
+							   if len(x) > 1 else '')(tc_matrix_data[tc_matrix_ts_root[0]+TS_DEFINITION_ROW_OFFSET+10][tc_matrix_ts_root[1]+i].split(' ')),  # codec_profile
+							   (lambda x: tc_matrix_data[tc_matrix_ts_root[0]+TS_DEFINITION_ROW_OFFSET+10][tc_matrix_ts_root[1]+i].split(' ')[1]
+							   if len(x) > 1 else tc_matrix_data[tc_matrix_ts_root[0]+TS_DEFINITION_ROW_OFFSET+10][tc_matrix_ts_root[1]+i])
+							   (tc_matrix_data[tc_matrix_ts_root[0]+TS_DEFINITION_ROW_OFFSET+10][tc_matrix_ts_root[1]+i].split(' ')),  # codec_level
+							   TestResult.NOT_APPLICABLE,  # codec_tier
+							   i_file_brand,  # file_brand
+							   tc_matrix_data[tc_matrix_ts_root[0]+TS_DEFINITION_ROW_OFFSET+2][tc_matrix_ts_root[1]+i][0:4],  # sample_entry_type
+							   i_parameter_sets_in_cmaf_header_present,  # parameter_sets_in_cmaf_header_present
+							   i_parameter_sets_in_band_present,  # parameter_sets_in_band_present
+							   i_picture_timing_sei_present,  # picture_timing_sei_present
+							   i_vui_timing_present,  # vui_timing_present
+							   C_DEFAULT_VUI_PRIMARIES_MCOEFFS,  # vui_primaries_mcoeffs
+							   C_DEFAULT_VUI_TRANSFER_CHARACTERISTICS,  # vui_transfer_characteristics
+							   TestResult.NOT_APPLICABLE,  # sei_pref_transfer_characteristics
+							   TestResult.NOT_APPLICABLE,  # sei_mastering_display_colour_vol
+							   TestResult.NOT_APPLICABLE,  # sei_content_light_level
+							   float(tc_matrix_data[tc_matrix_ts_root[0]+TS_DEFINITION_ROW_OFFSET+3][tc_matrix_ts_root[1]+i]),  # cmaf_fragment_duration in s
+							   i_cmaf_initialisation_constraints,  # cmaf_initialisation_constraints
+							   i_chunks_per_fragment,  # chunks_per_fragment
+							   i_b_frames_present,  # b_frames_present
+							   '',  # cmf2_sample_flags_present
+							   i_resolution,  # resolution
+							   C_DEFAULT_SAR,  # pixel_aspect_ratio
+							   i_frame_rate,  # frame_rate
+							   i_bit_rate,  # bit rate in kb/s
+							   i_duration,  # duration in s
+							   1/i_frame_rate,  # Max allowable delta between MPD mediaPresentationDuration and total sample duration
+							   '' # MPD bitstream mismatches
+								)
+			test_content.append(i_tc)
+	
+	if codec == 'hevc':
+		for i in range(0, tc_num_streams):
+			# print(str(i + 1) + ' of ' + str(tc_num_streams))
+			# print(tc_matrix_data[tc_matrix_ts_root[0] + TS_DEFINITION_ROW_OFFSET - 2][tc_matrix_ts_root[1] + i])
+			
+			i_mezzanine_label = tc_matrix_data[tc_matrix_ts_root[0] + TS_DEFINITION_ROW_OFFSET + 20][
+				tc_matrix_ts_root[1] + i] + tc_matrix_data[tc_matrix_ts_root[0] + TS_DEFINITION_ROW_OFFSET + 19][
+				tc_matrix_ts_root[1] + i] + ';' +  tc_matrix_data[tc_matrix_ts_root[0] + TS_DEFINITION_ROW_OFFSET + 21][
+				tc_matrix_ts_root[1] + i] + tc_matrix_data[tc_matrix_ts_root[0] + TS_DEFINITION_ROW_OFFSET + 19][
+				tc_matrix_ts_root[1] + i]  # mezzanine file prefix <25fps family; 30fps family> + mezanine label
+			
+			i_file_brand = tc_matrix_data[tc_matrix_ts_root[0] + TS_DEFINITION_ROW_OFFSET + 16][
+				tc_matrix_ts_root[1] + i]  # CMAF media profile / file brand
+			
+			i_parameter_sets_in_cmaf_header_present = True
+			if tc_matrix_data[tc_matrix_ts_root[0] + TS_DEFINITION_ROW_OFFSET + 5][tc_matrix_ts_root[1] + i].find(
+					'without parameter sets within the CMAF header') > -1:
+				i_parameter_sets_in_cmaf_header_present = False
+			
+			i_parameter_sets_in_band_present = False
+			if tc_matrix_data[tc_matrix_ts_root[0] + TS_DEFINITION_ROW_OFFSET + 5][tc_matrix_ts_root[1] + i].find(
+					'in-band parameter sets') > -1:
+				i_parameter_sets_in_band_present = True
+			
+			i_picture_timing_sei_present = False
+			if tc_matrix_data[tc_matrix_ts_root[0] + TS_DEFINITION_ROW_OFFSET][tc_matrix_ts_root[1] + i] == 'With':
+				i_picture_timing_sei_present = True
+			
+			i_vui_timing_present = False
+			if tc_matrix_data[tc_matrix_ts_root[0] + TS_DEFINITION_ROW_OFFSET + 1][tc_matrix_ts_root[1] + i] == 'With':
+				i_vui_timing_present = True
+			
+			i_vui_primaries_mcoeffs = tc_matrix_data[tc_matrix_ts_root[0] + TS_DEFINITION_ROW_OFFSET + 2][
+				tc_matrix_ts_root[1] + i]
+			if i_vui_primaries_mcoeffs:
+				i_vui_primaries_mcoeffs = colour_primaries_mcoeffs_values.get(i_vui_primaries_mcoeffs, '')
+			
+			i_vui_transfer_characteristics = tc_matrix_data[tc_matrix_ts_root[0] + TS_DEFINITION_ROW_OFFSET + 3][
+				tc_matrix_ts_root[1] + i]
+			if i_vui_transfer_characteristics:
+				i_vui_transfer_characteristics = transfer_characteristics_values.get(i_vui_transfer_characteristics, '')
 
+			i_sei_pref_transfer_characteristics = tc_matrix_data[tc_matrix_ts_root[0] + TS_DEFINITION_ROW_OFFSET + 4][
+					tc_matrix_ts_root[1] + i]
+			if i_sei_pref_transfer_characteristics:
+				i_sei_pref_transfer_characteristics = transfer_characteristics_values.get(i_sei_pref_transfer_characteristics, '')
+			
+			i_cmaf_initialisation_constraints = CmafInitConstraints.MULTIPLE
+			if tc_matrix_data[tc_matrix_ts_root[0] + TS_DEFINITION_ROW_OFFSET + 7][tc_matrix_ts_root[1] + i].find(
+					'Single') > -1:
+				i_cmaf_initialisation_constraints = CmafInitConstraints.SINGLE
+			
+			i_chunks_per_fragment = CmafChunksPerFragment.SINGLE
+			if tc_matrix_data[tc_matrix_ts_root[0] + TS_DEFINITION_ROW_OFFSET + 8][tc_matrix_ts_root[1] + i].find(
+					'multiple chunks') > -1:
+				i_chunks_per_fragment = CmafChunksPerFragment.MULTIPLE
+			elif tc_matrix_data[tc_matrix_ts_root[0] + TS_DEFINITION_ROW_OFFSET + 8][tc_matrix_ts_root[1] + i].find(
+					'Each sample') > -1:
+				i_chunks_per_fragment = CmafChunksPerFragment.MULTIPLE_CHUNKS_ARE_SAMPLES
+			
+			i_b_frames_present = TestResult.NOT_APPLICABLE
+			if tc_matrix_data[tc_matrix_ts_root[0] + TS_DEFINITION_ROW_OFFSET + 8][tc_matrix_ts_root[1] + i].find(
+					'p-frame only') > -1:
+				i_b_frames_present = False
+			elif tc_matrix_data[tc_matrix_ts_root[0] + TS_DEFINITION_ROW_OFFSET + 8][tc_matrix_ts_root[1] + i].find(
+					'with b-frames') > -1:
+				i_b_frames_present = True
+			
+			i_cmf2_sample_flags_present = tc_matrix_data[tc_matrix_ts_root[0] + TS_DEFINITION_ROW_OFFSET + 9][
+						   		tc_matrix_ts_root[1] + i]
+			if i_cmf2_sample_flags_present:
+				i_cmf2_sample_flags_present = sample_flag_values.get(i_cmf2_sample_flags_present, '')
+			
+			h_res = (lambda x: int(
+				tc_matrix_data[tc_matrix_ts_root[0] + TS_DEFINITION_ROW_OFFSET + 10][tc_matrix_ts_root[1] + i].split(
+					'x')[0])
+			if x.isdigit() else 0)(
+				tc_matrix_data[tc_matrix_ts_root[0] + TS_DEFINITION_ROW_OFFSET + 10][tc_matrix_ts_root[1] + i].split(
+					'x')[0])
+			v_res = (lambda x: int(
+				tc_matrix_data[tc_matrix_ts_root[0] + TS_DEFINITION_ROW_OFFSET + 10][tc_matrix_ts_root[1] + i].split(
+					'x')[1])
+			if x.isdigit() else 0)(
+				tc_matrix_data[tc_matrix_ts_root[0] + TS_DEFINITION_ROW_OFFSET + 10][tc_matrix_ts_root[1] + i].split(
+					'x')[1])
+			i_resolution = VideoResolution(h_res, v_res)
+			
+			i_frame_rate = (lambda x: float(
+				tc_matrix_data[tc_matrix_ts_root[0] + TS_DEFINITION_ROW_OFFSET + 12][tc_matrix_ts_root[1] + i])
+			if x.replace(".", "", 1).isdigit() else 0)(
+				tc_matrix_data[tc_matrix_ts_root[0] + TS_DEFINITION_ROW_OFFSET + 12][tc_matrix_ts_root[1] + i])
+			
+			i_bit_rate = (lambda x: int(
+				tc_matrix_data[tc_matrix_ts_root[0] + TS_DEFINITION_ROW_OFFSET + 13][tc_matrix_ts_root[1] + i])
+			if x.isdigit() else TestResult.NOT_APPLICABLE)(
+				tc_matrix_data[tc_matrix_ts_root[0] + TS_DEFINITION_ROW_OFFSET + 13][tc_matrix_ts_root[1] + i])
+			
+			i_duration = (lambda x: float(
+				tc_matrix_data[tc_matrix_ts_root[0] + TS_DEFINITION_ROW_OFFSET + 14][tc_matrix_ts_root[1] + i][:-1])
+			if x.replace(".", "", 1).isdigit() else 0)(
+				tc_matrix_data[tc_matrix_ts_root[0] + TS_DEFINITION_ROW_OFFSET + 14][tc_matrix_ts_root[1] + i][:-1])
+			
+			if str(i_duration)[-2:] == '.0':
+				i_duration = int(i_duration)
+
+			i_tc = TestContent(tc_matrix_data[tc_matrix_ts_root[0] + 1][tc_matrix_ts_root[1] + i],  # test_stream_id
+							   '',  # test_file_path
+							   mezzanine_version,  # mezzanine version
+							   str(h_res) + 'x' + str(v_res) + '@' + str(i_frame_rate) + '_' + str(
+								   '{0:g}'.format(i_duration)),  # format as encoded in the mezzanine filename
+							   i_mezzanine_label,  # mezzanine label
+							   {"verdict": "NOT TESTED"},  # conformance_test_result
+							   cmaf_brand_codecs.get(i_file_brand, 'unknown'),  # codec_name
+							   (lambda x: tc_matrix_data[tc_matrix_ts_root[0] + TS_DEFINITION_ROW_OFFSET + 15][
+								   tc_matrix_ts_root[1] + i].split(' ')[0]
+							   if len(x) > 1 else '')(
+								   tc_matrix_data[tc_matrix_ts_root[0] + TS_DEFINITION_ROW_OFFSET + 15][
+									   tc_matrix_ts_root[1] + i].split(' ')),  # codec_profile
+							   (lambda x: tc_matrix_data[tc_matrix_ts_root[0] + TS_DEFINITION_ROW_OFFSET + 15][
+								   tc_matrix_ts_root[1] + i].split(' ')[len(x)-1]
+							   if len(x) > 1 else tc_matrix_data[tc_matrix_ts_root[0] + TS_DEFINITION_ROW_OFFSET + 15][
+								   tc_matrix_ts_root[1] + i])
+							   (tc_matrix_data[tc_matrix_ts_root[0] + TS_DEFINITION_ROW_OFFSET + 15][
+									tc_matrix_ts_root[1] + i].split(' ')),  # codec_level
+							   (lambda x: tc_matrix_data[tc_matrix_ts_root[0] + TS_DEFINITION_ROW_OFFSET + 15][
+								   tc_matrix_ts_root[1] + i].split(' ')[1]
+							   if len(x) > 2 else '')(
+								   tc_matrix_data[tc_matrix_ts_root[0] + TS_DEFINITION_ROW_OFFSET + 15][
+									   tc_matrix_ts_root[1] + i].split(' ')),  # codec_tier
+							   i_file_brand,  # file_brand
+							   tc_matrix_data[tc_matrix_ts_root[0] + TS_DEFINITION_ROW_OFFSET + 5][
+								   tc_matrix_ts_root[1] + i][0:4],  # sample_entry_type
+							   i_parameter_sets_in_cmaf_header_present,  # parameter_sets_in_cmaf_header_present
+							   i_parameter_sets_in_band_present,  # parameter_sets_in_band_present
+							   i_picture_timing_sei_present,  # picture_timing_sei_present
+							   i_vui_timing_present,  # vui_timing_present
+							   i_vui_primaries_mcoeffs,  # vui_primaries_mcoeffs
+							   i_vui_transfer_characteristics,  # vui_transfer_characteristics
+							   i_sei_pref_transfer_characteristics,  # sei_pref_transfer_characteristics
+							   '',  # sei_mastering_display_colour_vol
+							   '',  # sei_content_light_level
+							   float(tc_matrix_data[tc_matrix_ts_root[0] + TS_DEFINITION_ROW_OFFSET + 6][
+										 tc_matrix_ts_root[1] + i]),  # cmaf_fragment_duration in s
+							   i_cmaf_initialisation_constraints,  # cmaf_initialisation_constraints
+							   i_chunks_per_fragment,  # chunks_per_fragment
+							   i_b_frames_present,  # b_frames_present
+							   i_cmf2_sample_flags_present,  # cmf2_sample_flags_present
+							   i_resolution,  # resolution
+							   tc_matrix_data[tc_matrix_ts_root[0] + TS_DEFINITION_ROW_OFFSET + 11][
+								   tc_matrix_ts_root[1] + i],  # pixel_aspect_ratio
+							   i_frame_rate,  # frame_rate
+							   i_bit_rate,  # bit rate in kb/s
+							   i_duration,  # duration in s
+							   1 / i_frame_rate,  # Max allowable delta between MPD mediaPresentationDuration and total sample duration
+							   '' # MPD bitstream mismatches
+							   )
+			test_content.append(i_tc)
+	
+	if not test_content:
+		sys.exit("Unknown CSV structure for codec \"" + str(args.codec) + "\" .")
+	## Debug print to view test content extracted from CSV
+	# else:
+	# 	for tc in test_content:
+	# 		print(json.dumps(tc, indent=4, cls=TestContentFullEncoder, ensure_ascii=False).encode('utf8'))
+	
 	# Extract expected switching set parameters
 	tc_matrix_ss_start = 0
 	tc_matrix_ss_root = [0, 0]
