@@ -2662,7 +2662,7 @@ if __name__ == "__main__":
 		if args.codec.lower() not in set(cmaf_brand_codecs.values()):
 			sys.exit("Test vector codec \"" + str(args.codec) + "\" does not have a known WAVE media profile as of "+WAVE_CONTENT_SPEC+".")
 		else:
-			codec = args.codec
+			codec = args.codec.lower()
 	
 	tc_matrix = ''
 	if args.matrix is not None:
