@@ -1832,6 +1832,7 @@ def analyse_stream(test_content, frame_rate_family, debug_folder):
 	file_trun_version = []
 	file_trun_sample_duration_present = []
 	file_trun_sample_flags_present = []
+	file_trun_first_sample_flags_present = []
 	file_trune_sample_duration_present = []
 	file_trune_sample_size_present = []
 	file_trune_sample_flags_present = []
@@ -2183,6 +2184,16 @@ def analyse_stream(test_content, frame_rate_family, debug_folder):
 					and trun.get("IsLeading") and trun.get("DependsOn") and trun.get("IsDependedOn")
 					and trun.get("HasRedundancy")))
 				
+				trun_first_sample_flags = trun.findall('.//{*}FirstSampleFlags')
+				if trun_first_sample_flags:
+					# check flags (IsLeading SampleDependsOn SampleIsDependedOn SampleHasRedundancy SamplePadding SampleSync SampleDegradationPriority)
+					file_trun_first_sample_flags_present.append(bool(
+						trun_first_sample_flags[0].get("SamplePadding") and trun_first_sample_flags[0].get("SampleSync")
+						and trun_first_sample_flags[0].get("SampleDegradationPriority")
+						and trun_first_sample_flags[0].get("IsLeading") and trun_first_sample_flags[0].get("SampleDependsOn")
+						and trun_first_sample_flags[0].get("SampleIsDependedOn")
+						and trun_first_sample_flags[0].get("SampleHasRedundancy")))
+				
 				trune_list = trun.findall('.//{*}TrackRunEntry')
 				trun_trune_sample_duration_present = []
 				trune_sample_duration = []
@@ -2201,7 +2212,7 @@ def analyse_stream(test_content, frame_rate_family, debug_folder):
 						duration_added = True
 					# check TrackRunEntry@Size
 					trun_trune_sample_size_present.append(bool(trune.get("Size")))
-					# check TrackRunEntry flags
+					# check TrackRunEntry flags (SamplePadding Sync DegradationPriority IsLeading DependsOn IsDependedOn HasRedundancy)
 					trun_trune_sample_flags_present.append(bool(
 						trune.get("SamplePadding") and trune.get("Sync") and trune.get("DegradationPriority")
 						and trune.get("IsLeading") and trune.get("DependsOn") and trune.get("IsDependedOn")
@@ -2232,9 +2243,10 @@ def analyse_stream(test_content, frame_rate_family, debug_folder):
 				(sum(file_tfhd_sample_size_present) == len(file_tfhd_sample_size_present)) \
 				or (sum(file_trune_sample_size_present) == len(file_trune_sample_size_present))
 			flags_present = \
-				(sum(file_tfhd_default_sample_flags_present) == len(file_tfhd_default_sample_flags_present)) \
-				or (sum(file_trun_sample_flags_present) == len(file_trun_sample_flags_present)) \
-				or (sum(file_trune_sample_flags_present) == len(file_trune_sample_flags_present))
+				(sum(file_tfhd_default_sample_flags_present) == len(file_tfhd_default_sample_flags_present) and len(file_tfhd_default_sample_flags_present) > 0) \
+				or (sum(file_trun_sample_flags_present) == len(file_trun_sample_flags_present) and len(file_trun_sample_flags_present) > 0) \
+				or (sum(file_trun_first_sample_flags_present) == len(file_trun_first_sample_flags_present) and len(file_trun_first_sample_flags_present) > 0) \
+				or (sum(file_trune_sample_flags_present) == len(file_trune_sample_flags_present) and len(file_trune_sample_flags_present) > 0)
 			# TrackRunBox@Version=1 for video CMAF Tracks not contained in Track Files
 			trun_version_present = \
 				(sum(file_trun_version) == len(file_trun_version))
@@ -2257,7 +2269,7 @@ def analyse_stream(test_content, frame_rate_family, debug_folder):
 				test_content.cmf2_sample_flags_present[2] = TestResult.PASS \
 					if test_content.cmf2_sample_flags_present[0] == test_content.cmf2_sample_flags_present[1] \
 					else TestResult.FAIL
-						
+					
 			file_samples_per_chunk = [element.get("SampleCount") for element in
 										  mp4_frag_info_root.iter('{*}TrackRunBox')]
 			file_samples_per_fragment = sum(map(int, file_samples_per_chunk))
@@ -2266,7 +2278,7 @@ def analyse_stream(test_content, frame_rate_family, debug_folder):
 			spc_count = Counter(file_samples_per_chunk)
 			print(str(file_samples_per_fragment) + ' samples per fragment, composed of:')
 			for spc_k, spc_v in spc_count.items():
-				print(str(spc_v) + ' chunk(s) with ' + str(spc_k) + ' sample(s)')
+				print('  ' + str(spc_v) + ' chunk(s) with ' + str(spc_k) + ' sample(s)')
 			file_chunks_per_fragment = len(file_samples_per_chunk)
 			if test_content.chunks_per_fragment[2] == TestResult.NOT_TESTED or test_content.chunks_per_fragment[2] == TestResult.PASS:
 				if file_chunks_per_fragment > 1:
