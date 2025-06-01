@@ -820,161 +820,247 @@ def check_and_analyse_ss(ss_test_content, test_content, tc_vectors_folder, frame
 	
 	if frame_rate_family not in [TS_LOCATION_FRAME_RATES_50, TS_LOCATION_FRAME_RATES_59_94, TS_LOCATION_FRAME_RATES_60]:
 		return
+	
+	ss_mpd_path = ''
+	for ss in ss_test_content:
+		# Print switching set id
+		print('## Testing ' + ss.switching_set_id)
+		ss_codec = 'unknown'
+		for tc in test_content:
+			if tc.test_stream_id == ss.test_stream_ids[0][0]:
+				ss_codec = cmaf_brand_codecs.get(tc.file_brand[0], 'unknown')
 		
-	# Print switching set id
-	print('## Testing ' + ss_test_content.switching_set_id)
-	
-	# Extract necessary data from MPD
-	print('Extracting metadata from MPD...')
-	mpd_info = etree.parse(str(Path(str(tc_vectors_folder) + sep + tc_codec + '_' + frame_rate_family + '_' + SS_NAME + '_' + TS_MPD_NAME)))
-	mpd_info_root = mpd_info.getroot()
-	mpd_representations = [element.get("id") for element in mpd_info_root.iter('{*}Representation')]
-	mpd_representations = sorted(mpd_representations, key=lambda x: x.split('/')[2])
-	print()
-	
-	if len(mpd_representations) > len(ss_test_content.test_stream_ids[0]):
-		ss_test_content.test_stream_ids[2] = TestResult.FAIL \
-		+ ' (too many representations: ' + str(len(mpd_representations)) \
-		+ ' where ' + str(len(ss_test_content.test_stream_ids[0])) + ' expected)'
-	
-	# Check mezzanine version
-	try:
-		ss_test_content.mezzanine_version[1] = float(mpd_info_root[0][1].text.split(' ')[2])
-		ss_test_content.mezzanine_version[2] = TestResult.PASS \
-			if (ss_test_content.mezzanine_version[0] == ss_test_content.mezzanine_version[1]) \
-			else TestResult.FAIL
-	except ValueError:
-		ss_test_content.mezzanine_version[1] = 'not found where expected in MPD ('+mpd_info_root[0][1].text+')'
-		ss_test_content.mezzanine_version[2] = TestResult.UNKNOWN
-		raise
-	
-	# TODO: Check switching set init constraints
-	
-	for i, tc_id in enumerate(ss_test_content.test_stream_ids[0]):
-		if tc_id == '':
-			ss_test_content.test_stream_ids[2][i] = TestResult.UNKNOWN
-		elif 't'+tc_id in mpd_representations[i].split('/'):
-			idx = mpd_representations[i].split('/').index('t'+tc_id)
-			ss_test_content.test_stream_ids[1][i] = mpd_representations[i].split('/')[idx][1:]
-			ss_test_content.test_stream_ids[2][i] = TestResult.PASS
+		if ss_codec == 'avc':
+			ss_path = str(Path(
+				str(tc_vectors_folder) + sep + SS_LOCATION + sep + frame_rate_family + sep + ss.switching_set_id))
+		elif ss_codec == 'hevc':
+			ss_path = str(Path(
+				str(tc_vectors_folder) + sep + SS_LOCATION + sep + frame_rate_family + sep + ss.switching_set_id))
 		else:
-			ss_test_content.test_stream_ids[2][i] = TestResult.FAIL
+			return
 		
-		test_stream_dir = Path(str(tc_vectors_folder) + sep + mpd_representations[i] + sep)
-		ss_test_content.test_file_paths[0][i] = str(test_stream_dir)
-		print("Expected test stream folder based on MPD: ")
-		print(str(test_stream_dir))
-		
-		if os.path.isdir(test_stream_dir):
-			print("Found test stream folder \"" + str(test_stream_dir) + "\"...")
-			date_dirs = next(os.walk(str(test_stream_dir)))[1]
+		if os.path.isdir(ss_path):
+			print("Found test stream folder \""+str(ss_path)+"\"...")
+			date_dirs = next(os.walk(str(ss_path)))[1]
 			if len(date_dirs) > 0:
 				date_dirs.sort()
-				most_recent_date = date_dirs[len(date_dirs) - 1]
+				most_recent_date = date_dirs[len(date_dirs)-1]
 			else:
-				ss_test_content.test_file_paths[1][i] = 'release (YYYY-MM-DD) folder missing'
-				ss_test_content.test_file_paths[2][i] = TestResult.FAIL
-				print('No test streams releases found for ' + 't' + tc_id + '.')
+				ss.test_file_paths[0][0] = ss_path
+				ss.test_file_paths[1][0] = 'release (YYYY-MM-DD) folder missing'
+				ss.test_file_paths[2][0] = TestResult.FAIL
+				print('No MPD releases found for '+ss.switching_set_id+'.')
 				print()
 				continue
-			test_stream_date_dir = Path(str(test_stream_dir) + sep + most_recent_date + sep)
+			test_stream_date_dir = Path(str(ss_path)+sep+most_recent_date+sep)
 			if os.path.isdir(test_stream_date_dir):
-				print(str(test_stream_date_dir) + ' OK')
+				print(str(test_stream_date_dir)+' OK')
 			else:
-				ss_test_content.test_file_paths[1][i] = 'release (YYYY-MM-DD) folder missing'
-				ss_test_content.test_file_paths[2][i] = TestResult.FAIL
-				print('Test stream folder \"' + str(test_stream_date_dir) + '\" does not exist.')
+				ss.test_file_paths[0][0] = test_stream_date_dir
+				ss.test_file_paths[1][0] = 'release (YYYY-MM-DD) folder missing'
+				ss.test_file_paths[2][0] = TestResult.FAIL
+				print('Test stream folder \"'+str(test_stream_date_dir)+'\" does not exist.')
 				print()
 				continue
-			test_stream_path = Path(str(test_stream_date_dir) + sep + TS_MPD_NAME)
-			if os.path.isfile(test_stream_path):
-				print(str(test_stream_path) + ' OK')
-				ss_test_content.test_file_paths[1][i] = str(test_stream_path)
+			ss_mpd_path = Path(str(test_stream_date_dir)+sep+TS_MPD_NAME)
+			if os.path.isfile(ss_mpd_path):
+				print(str(ss_mpd_path)+' OK')
+				ss.test_file_paths[0][0] = str(ss_mpd_path)
+				ss.test_file_paths[1][0] = str(ss_mpd_path)
+				ss.test_file_paths[2][0] = TestResult.PASS
 			else:
-				ss_test_content.test_file_paths[1][i] = TS_MPD_NAME + ' file missing'
-				ss_test_content.test_file_paths[2][i] = TestResult.FAIL
-				print(str(test_stream_path) + ' does not exist.')
+				ss.test_file_paths[0][0] = ss_mpd_path
+				ss.test_file_paths[1][0] = TS_MPD_NAME+' file missing'
+				ss.test_file_paths[2][0] = TestResult.FAIL
+				print(str(ss_mpd_path)+' does not exist.')
 				print()
-				continue
-			test_stream_path = Path(str(test_stream_date_dir) + sep + '1' + sep + TS_INIT_SEGMENT_NAME)
-			if os.path.isfile(test_stream_path):
-				print(str(test_stream_path) + ' OK')
-			else:
-				ss_test_content.test_file_paths[1][i] = TS_INIT_SEGMENT_NAME + ' file missing'
-				ss_test_content.test_file_paths[2][i] = TestResult.FAIL
-				print(str(test_stream_path) + ' does not exist.')
-				print()
-				continue
-			test_stream_path = Path(str(test_stream_date_dir) + sep + '1' + sep + TS_FIRST_SEGMENT_NAME)
-			if os.path.isfile(test_stream_path):
-				print(str(test_stream_path) + " OK")
-				print()
-				ss_test_content.test_file_paths[1][i] = str(test_stream_date_dir)
-				if ss_test_content.test_file_paths[0][i] == ss_test_content.test_file_paths[1][i]:
-					ss_test_content.test_file_paths[2][i] = TestResult.PASS
-				else:
-					ss_test_content.test_file_paths[2][i] = TestResult.FAIL
-					print('Incorrect test stream path.')
-					print()
-			else:
-				ss_test_content.test_file_paths[1][i] = TS_FIRST_SEGMENT_NAME + ' file missing'
-				ss_test_content.test_file_paths[2][i] = TestResult.FAIL
-				print(str(test_stream_path) + ' does not exist.')
-				print()
-				continue
-			# Copy analysis result for this test vector
-			# ss_test_content.test_stream_validation_results[i]
+				ss_mpd_path = ''
 		else:
-			ss_test_content.test_file_paths[1][i] = 'folder missing'
-			ss_test_content.test_file_paths[2][i] = TestResult.FAIL
-			print('Test stream folder \"' + str(test_stream_dir) + '\" does not exist.')
+			ss.test_file_paths[0][0] = ss_path
+			ss.test_file_paths[1][0] = 'folder missing'
+			ss.test_file_paths[2][0] = TestResult.FAIL
+			print('Test stream folder \"'+str(ss_path)+'\" does not exist.')
 			print()
-	
-	# TODO: Perform conformance test
-	
-	# Count results
-	if ss_test_content.conformance_test_result != '':
-		if ss_test_content.conformance_test_result['verdict'] == 'PASS':
-			TS_CONFORMANCE_TOTAL_PASS += 1
-		elif ss_test_content.conformance_test_result['verdict'] == 'FAIL':
-			TS_CONFORMANCE_TOTAL_FAIL += 1
+		
+		if ss_mpd_path == '':
+			return
+		
+		# Extract necessary data from MPD
+		print('Extracting metadata from MPD...')
+		mpd_info = etree.parse(ss_mpd_path)
+		mpd_info_root = mpd_info.getroot()
+		mpd_representations = [element.get("id") for element in mpd_info_root.iter('{*}Representation')]
+		mpd_representations = sorted(mpd_representations, key=lambda x: x.split('/')[2])
+		print()
+		
+		if len(mpd_representations) != len(ss.test_stream_ids[0]):
+			ss.test_stream_ids[2] = TestResult.FAIL \
+			+ ' (' + str(len(mpd_representations)) \
+			+ ' representations where ' + str(len(ss_test_content.test_stream_ids[0])) + ' expected)'
+		
+		# Check mezzanine version
+		try:
+			ss.mezzanine_version[1] = float(mpd_info_root[0][1].text.split(' ')[2])
+			ss.mezzanine_version[2] = TestResult.PASS \
+				if (ss.mezzanine_version[0] == ss.mezzanine_version[1]) \
+				else TestResult.FAIL
+		except ValueError:
+			ss.mezzanine_version[1] = 'not found where expected in MPD ('+mpd_info_root[0][1].text+')'
+			ss.mezzanine_version[2] = TestResult.UNKNOWN
+			raise
+		
+		# TODO: Check switching set init constraints
+		# Determine applicable use case
+		#
+		# Single initialization:
+		## Check ID presence : urn:mpeg:cmaf:siss
+		# 1) Common CMAF header in all tracks,
+		# containing sample entries sufficient to decode and display every track (i.e. with parameter sets)
+		# + fragments without in-band parameter sets (avc1).
+		#
+		# 2) Common CMAF header in all tracks,
+		# without sample entries (i.e. without parameter sets)
+		# + fragments with in-band parameter sets (avc3).
+		#
+		# 3) Common CMAF header in all tracks, containing sample entries sufficient to decode and display every track
+		# (i.e. with parameter sets)
+		# + fragments with in-band parameter sets (avc3).
+		#
+		# Multiple initialization:
+		#
+		# 4) Different CMAF header per track, containing sample entry sufficient to decode and display the track
+		# (i.e. with parameter sets)
+		# + fragments without in-band parameter sets (avc1).
+		#
+		# 5) Different CMAF header per track, without sample entry (i.e. without parameter sets)
+		# + fragments with in-band parameter sets (avc3).
+		
+		
+		
+		for i, tc_id in enumerate(ss.test_stream_ids[0]):
+			if tc_id == '':
+				ss.test_stream_ids[2][i] = TestResult.UNKNOWN
+			elif 't'+tc_id in mpd_representations[i].split('/'):
+				idx = mpd_representations[i].split('/').index('t'+tc_id)
+				ss.test_stream_ids[1][i] = mpd_representations[i].split('/')[idx][1:]
+				ss.test_stream_ids[2][i] = TestResult.PASS
+			else:
+				ss.test_stream_ids[2][i] = TestResult.FAIL
+			
+			test_stream_dir = Path(str(tc_vectors_folder) + sep + mpd_representations[i] + sep)
+			ss.test_file_paths[0][i] = str(test_stream_dir)
+			print("Expected test stream folder based on MPD: ")
+			print(str(test_stream_dir))
+			
+			if os.path.isdir(test_stream_dir):
+				print("Found test stream folder \"" + str(test_stream_dir) + "\"...")
+				date_dirs = next(os.walk(str(test_stream_dir)))[1]
+				if len(date_dirs) > 0:
+					date_dirs.sort()
+					most_recent_date = date_dirs[len(date_dirs) - 1]
+				else:
+					ss.test_file_paths[1][i] = 'release (YYYY-MM-DD) folder missing'
+					ss.test_file_paths[2][i] = TestResult.FAIL
+					print('No test streams releases found for ' + 't' + tc_id + '.')
+					print()
+					continue
+				test_stream_date_dir = Path(str(test_stream_dir) + sep + most_recent_date + sep)
+				if os.path.isdir(test_stream_date_dir):
+					print(str(test_stream_date_dir) + ' OK')
+				else:
+					ss.test_file_paths[1][i] = 'release (YYYY-MM-DD) folder missing'
+					ss.test_file_paths[2][i] = TestResult.FAIL
+					print('Test stream folder \"' + str(test_stream_date_dir) + '\" does not exist.')
+					print()
+					continue
+				test_stream_path = Path(str(test_stream_date_dir) + sep + TS_MPD_NAME)
+				if os.path.isfile(test_stream_path):
+					print(str(test_stream_path) + ' OK')
+					ss.test_file_paths[1][i] = str(test_stream_path)
+				else:
+					ss.test_file_paths[1][i] = TS_MPD_NAME + ' file missing'
+					ss.test_file_paths[2][i] = TestResult.FAIL
+					print(str(test_stream_path) + ' does not exist.')
+					print()
+					continue
+				test_stream_path = Path(str(test_stream_date_dir) + sep + '1' + sep + TS_INIT_SEGMENT_NAME)
+				if os.path.isfile(test_stream_path):
+					print(str(test_stream_path) + ' OK')
+				else:
+					ss.test_file_paths[1][i] = TS_INIT_SEGMENT_NAME + ' file missing'
+					ss.test_file_paths[2][i] = TestResult.FAIL
+					print(str(test_stream_path) + ' does not exist.')
+					print()
+					continue
+				test_stream_path = Path(str(test_stream_date_dir) + sep + '1' + sep + TS_FIRST_SEGMENT_NAME)
+				if os.path.isfile(test_stream_path):
+					print(str(test_stream_path) + " OK")
+					print()
+					ss.test_file_paths[1][i] = str(test_stream_date_dir)
+					if ss.test_file_paths[0][i] == ss.test_file_paths[1][i]:
+						ss.test_file_paths[2][i] = TestResult.PASS
+					else:
+						ss.test_file_paths[2][i] = TestResult.FAIL
+						print('Incorrect test stream path.')
+						print()
+				else:
+					ss.test_file_paths[1][i] = TS_FIRST_SEGMENT_NAME + ' file missing'
+					ss.test_file_paths[2][i] = TestResult.FAIL
+					print(str(test_stream_path) + ' does not exist.')
+					print()
+					continue
+			else:
+				ss.test_file_paths[1][i] = 'folder missing'
+				ss.test_file_paths[2][i] = TestResult.FAIL
+				print('Test stream folder \"' + str(test_stream_dir) + '\" does not exist.')
+				print()
+		
+		# TODO: Perform conformance test
+		
+		# Count results
+		if ss.conformance_test_result != '':
+			if ss.conformance_test_result['verdict'] == 'PASS':
+				TS_CONFORMANCE_TOTAL_PASS += 1
+			elif ss.conformance_test_result['verdict'] == 'FAIL':
+				TS_CONFORMANCE_TOTAL_FAIL += 1
+			else:
+				TS_CONFORMANCE_TOTAL_UNKNOWN += 1
 		else:
 			TS_CONFORMANCE_TOTAL_UNKNOWN += 1
-	else:
-		TS_CONFORMANCE_TOTAL_UNKNOWN += 1
-	for a, v in ss_test_content.__dict__.items():
-		if len(v) == 3:
-			if isinstance(v[0], list):
-				for i in range(0, len(v[0])):
-					if v[2][i] == TestResult.PASS:
+		for a, v in ss.__dict__.items():
+			if len(v) == 3:
+				if isinstance(v[0], list):
+					for i in range(0, len(v[0])):
+						if v[2][i] == TestResult.PASS:
+							TS_RESULTS_TOTAL_PASS += 1
+		
+						elif v[2][i] == TestResult.FAIL:
+							TS_RESULTS_TOTAL_FAIL += 1
+		
+						elif v[2][i] == TestResult.NOT_TESTED:
+							TS_RESULTS_TOTAL_NOT_TESTED += 1
+		
+						elif v[2][i] == TestResult.NOT_TESTABLE:
+							TS_RESULTS_TOTAL_NOT_TESTABLE += 1
+		
+						elif v[2][i] == TestResult.NOT_APPLICABLE:
+							TS_RESULTS_TOTAL_NOT_APPLICABLE += 1
+				else:
+					if v[2] == TestResult.PASS:
 						TS_RESULTS_TOTAL_PASS += 1
-	
-					elif v[2][i] == TestResult.FAIL:
+					
+					elif v[2] == TestResult.FAIL:
 						TS_RESULTS_TOTAL_FAIL += 1
-	
-					elif v[2][i] == TestResult.NOT_TESTED:
+					
+					elif v[2] == TestResult.NOT_TESTED:
 						TS_RESULTS_TOTAL_NOT_TESTED += 1
-	
-					elif v[2][i] == TestResult.NOT_TESTABLE:
+					
+					elif v[2] == TestResult.NOT_TESTABLE:
 						TS_RESULTS_TOTAL_NOT_TESTABLE += 1
-	
-					elif v[2][i] == TestResult.NOT_APPLICABLE:
+					
+					elif v[2] == TestResult.NOT_APPLICABLE:
 						TS_RESULTS_TOTAL_NOT_APPLICABLE += 1
-			else:
-				if v[2] == TestResult.PASS:
-					TS_RESULTS_TOTAL_PASS += 1
-				
-				elif v[2] == TestResult.FAIL:
-					TS_RESULTS_TOTAL_FAIL += 1
-				
-				elif v[2] == TestResult.NOT_TESTED:
-					TS_RESULTS_TOTAL_NOT_TESTED += 1
-				
-				elif v[2] == TestResult.NOT_TESTABLE:
-					TS_RESULTS_TOTAL_NOT_TESTABLE += 1
-				
-				elif v[2] == TestResult.NOT_APPLICABLE:
-					TS_RESULTS_TOTAL_NOT_APPLICABLE += 1
+
 
 	# Save metadata to JSON file
 	tc_res_filepath = Path(
