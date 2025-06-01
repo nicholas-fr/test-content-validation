@@ -1212,6 +1212,7 @@ def analyse_stream(test_content, frame_rate_family, debug_folder):
 
 	# Open ffmpeg trace_headers output for analysis
 	ffmpeg_trace_headers_error = False
+	ffmpeg_trace_headers_error_text = []
 	headers_trace_file = open(str(Path(str(tc_matrix.stem)+'_trace_headers_init_'+time_of_analysis+'.txt')), encoding="utf-8")
 	headers_trace = headers_trace_file.readlines()
 	print('Checking ffmpeg trace_headers log...')
@@ -1785,11 +1786,23 @@ def analyse_stream(test_content, frame_rate_family, debug_folder):
 				h265_detected = True
 				continue
 		
+		if line.__contains__('Error '):
+			ffmpeg_trace_headers_error_text.append(fth_last_lines[1][fth_last_lines[1].index('] ')+2:-1])
+			ffmpeg_trace_headers_error_text.append(fth_last_lines[0][fth_last_lines[1].index('] ')+2:-1])
+			ffmpeg_trace_headers_error_text.append(line[line.index('] ')+2:-1])
+			print("ffmpeg trace_headers error: ")
+			print("  "+fth_last_lines[1][fth_last_lines[1].index('] ')+2:-1])
+			print("  "+fth_last_lines[0][fth_last_lines[1].index('] ')+2:-1])
+			print("  "+line[line.index('] ')+2:-1])
+			ffmpeg_trace_headers_error = True
+
 		if line.__contains__(FFMPEG_ERROR_INVALID_INPUT):
 			ffmpeg_trace_headers_error = True
+			fth_last_lines.appendleft(line)
 			break
 		if line.__contains__(FFMPEG_ERROR_TRACE_HEADERS):
 			ffmpeg_trace_headers_error = True
+			fth_last_lines.appendleft(line)
 			break
 		fth_last_lines.appendleft(line)
 	
@@ -2353,14 +2366,21 @@ def analyse_stream(test_content, frame_rate_family, debug_folder):
 	# Check frame types (I/P/B) present in stream
 	j = 0
 	
-	if nal_slice_types == [] and ffmpeg_trace_headers_error:
-		print('Error occurred when ffmpeg was processing the stream: unable to determine number of i/p/b frames and in-band parameter sets:')
-		print(fth_last_lines[1][:-1])
-		print(fth_last_lines[0][:-1])
+	if ffmpeg_trace_headers_error:
+		print('Error occurred when ffmpeg was processing the stream: unable to accurately determine number of i/p/b frames and in-band parameter sets:')
+		if ffmpeg_trace_headers_error_text:
+			for line in ffmpeg_trace_headers_error_text:
+				print(line)
+		else:
+			print(fth_last_lines[1][:-1])
+			print(fth_last_lines[0][:-1])
+		
 		test_content.b_frames_present[2] = TestResult.NOT_TESTABLE
 		test_content.parameter_sets_in_band_present[2] = TestResult.NOT_TESTABLE
+		test_content.duration[2] = TestResult.NOT_TESTABLE
+		test_content.duration[1] = str(test_content.duration[1]) + str(': ' + '; '.join(ffmpeg_trace_headers_error_text))
 		
-	else:
+	if nal_slice_types:
 		for ntype, stype in nal_slice_types:
 			if h264_detected:
 				if stype == 2 or stype == 7:
