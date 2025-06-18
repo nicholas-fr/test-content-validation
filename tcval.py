@@ -3011,6 +3011,10 @@ if __name__ == "__main__":
 					'x')[1])
 			i_resolution = VideoResolution(h_res, v_res)
 			
+			h_ratio = tc_matrix_data[tc_matrix_ts_root[0] + TS_DEFINITION_ROW_OFFSET + 11][tc_matrix_ts_root[1] + i].split(':')[0].lstrip('0')
+			v_ratio = tc_matrix_data[tc_matrix_ts_root[0] + TS_DEFINITION_ROW_OFFSET + 11][tc_matrix_ts_root[1] + i].split(':')[1].lstrip('0')
+			i_pixel_aspect_ratio = h_ratio + ':' + v_ratio
+			
 			i_frame_rate = (lambda x: float(
 				tc_matrix_data[tc_matrix_ts_root[0] + TS_DEFINITION_ROW_OFFSET + 12][tc_matrix_ts_root[1] + i])
 			if x.replace(".", "", 1).isdigit() else 0)(
@@ -3072,8 +3076,7 @@ if __name__ == "__main__":
 							   i_b_frames_present,  # b_frames_present
 							   i_cmf2_sample_flags_present,  # cmf2_sample_flags_present
 							   i_resolution,  # resolution
-							   tc_matrix_data[tc_matrix_ts_root[0] + TS_DEFINITION_ROW_OFFSET + 11][
-								   tc_matrix_ts_root[1] + i],  # pixel_aspect_ratio
+							   i_pixel_aspect_ratio,  # pixel_aspect_ratio
 							   i_frame_rate,  # frame_rate
 							   i_bit_rate,  # bit rate in kb/s
 							   i_duration,  # duration in s
