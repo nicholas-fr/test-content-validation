@@ -2232,7 +2232,7 @@ def analyse_stream(test_content, frame_rate_family, debug_folder):
 				file_trune_sample_size_present.append(sum(trun_trune_sample_size_present)==len(trun_trune_sample_size_present))
 				file_trune_sample_flags_present.append(sum(trun_trune_sample_flags_present)==len(trun_trune_sample_flags_present))
 			
-			# Sample duration, sample size and flags are set in tfhd or trun (TrackRunBox & TrackRunEntry)
+			# Sample duration, sample size and flags are set in tfhd (TrackFragmentHeaderBox) and/or trun (TrackRunBox & TrackRunEntry)
 			description_index_present = \
 				(sum(file_tfhd_sample_description_index_present) == len(file_tfhd_sample_description_index_present))
 			duration_present = \
@@ -2241,7 +2241,8 @@ def analyse_stream(test_content, frame_rate_family, debug_folder):
 				or (sum(file_trune_sample_duration_present) == len(file_trune_sample_duration_present))
 			size_present = \
 				(sum(file_tfhd_sample_size_present) == len(file_tfhd_sample_size_present)) \
-				or (sum(file_trune_sample_size_present) == len(file_trune_sample_size_present))
+				or (sum(file_trune_sample_size_present) == len(file_trune_sample_size_present)) \
+				or ((sum(file_tfhd_sample_size_present) + sum(file_trune_sample_size_present)) == len(file_tfhd_sample_size_present))
 			flags_present = \
 				(sum(file_tfhd_default_sample_flags_present) == len(file_tfhd_default_sample_flags_present) and len(file_tfhd_default_sample_flags_present) > 0) \
 				or (sum(file_trun_sample_flags_present) == len(file_trun_sample_flags_present) and len(file_trun_sample_flags_present) > 0) \
