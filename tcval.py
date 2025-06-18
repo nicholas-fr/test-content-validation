@@ -2226,11 +2226,17 @@ def analyse_stream(test_content, frame_rate_family, debug_folder):
 					elif trex_default_sample_duration:
 						file_tot_sample_duration += int(trex_default_sample_duration) * int(s_count) / int(file_timescale)
 				
-				file_trune_sample_duration_present.append(sum(trun_trune_sample_duration_present)==len(trun_trune_sample_duration_present))
+				file_trune_sample_duration_present.append(
+					sum(trun_trune_sample_duration_present)==len(trun_trune_sample_duration_present)
+					and len(trun_trune_sample_duration_present) > 0)
 				if trune_sample_duration:
 					trun_trune_sample_duration.append(trune_sample_duration)
-				file_trune_sample_size_present.append(sum(trun_trune_sample_size_present)==len(trun_trune_sample_size_present))
-				file_trune_sample_flags_present.append(sum(trun_trune_sample_flags_present)==len(trun_trune_sample_flags_present))
+				file_trune_sample_size_present.append(
+					sum(trun_trune_sample_size_present)==len(trun_trune_sample_size_present)
+					and len(trun_trune_sample_size_present) > 0)
+				file_trune_sample_flags_present.append(
+					sum(trun_trune_sample_flags_present)==len(trun_trune_sample_flags_present)
+					and len(trun_trune_sample_flags_present) > 0)
 			
 			# Sample duration, sample size and flags are set in tfhd (TrackFragmentHeaderBox) and/or trun (TrackRunBox & TrackRunEntry)
 			description_index_present = \
