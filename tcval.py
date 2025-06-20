@@ -2134,7 +2134,7 @@ def analyse_stream(test_content, frame_rate_family, debug_folder):
 	# Verify MPD and segment duration are valid
 	print('Extracting SampleDuration from every TrackFragmentHeaderBox... ')
 	
-	seg_files = os.listdir(str(Path(test_content.test_file_path + sep + '1' + sep)))
+	seg_files = sorted(os.listdir(str(Path(test_content.test_file_path + sep + '1' + sep))), key=len)
 	for m4s in seg_files:
 		if m4s.endswith('.m4s'):
 			file_total_fragments += 1
