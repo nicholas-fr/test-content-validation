@@ -1817,6 +1817,8 @@ def analyse_stream(test_content, frame_rate_family, debug_folder):
 	file_media_presentation_duration = 0
 	file_timescale = 0
 	file_tot_sample_duration = 0
+	file_fragment_duration = 0
+	file_fragment_durations = []
 	file_stream_brands = []
 	file_samples_per_chunk = []
 	file_samples_per_fragment = 0
@@ -2138,6 +2140,7 @@ def analyse_stream(test_content, frame_rate_family, debug_folder):
 	for m4s in seg_files:
 		if m4s.endswith('.m4s'):
 			file_total_fragments += 1
+			file_fragment_duration = 0
 			MP4Box_cl2 = ['MP4Box',
 						  str(Path(test_content.test_file_path + sep + '1' + sep + m4s)),
 						  '-init-seg',
@@ -2212,7 +2215,9 @@ def analyse_stream(test_content, frame_rate_family, debug_folder):
 					if trune.get("SampleDuration"):
 						trun_trune_sample_duration_present.append(bool(trune.get("SampleDuration")))
 						trune_sample_duration.append(trune.get("SampleDuration"))
-						file_tot_sample_duration += int(trune.get("SampleDuration")) / int(file_timescale)
+						tmp_duration = int(trune.get("SampleDuration")) / int(file_timescale)
+						file_tot_sample_duration += tmp_duration
+						file_fragment_duration += tmp_duration
 						duration_added = True
 					# check TrackRunEntry@Size
 					trun_trune_sample_size_present.append(bool(trune.get("Size")))
@@ -2224,12 +2229,18 @@ def analyse_stream(test_content, frame_rate_family, debug_folder):
 				if not duration_added:
 					s_count = trun.get("SampleCount")
 					if trun.get("SampleDuration"):
-						file_tot_sample_duration += int(trun.get("SampleDuration")) * int(s_count) / int(file_timescale)
+						tmp_duration = int(trun.get("SampleDuration")) * int(s_count) / int(file_timescale)
+						file_tot_sample_duration += tmp_duration
+						file_fragment_duration += tmp_duration
 					elif tfhd.get("SampleDuration"):
-						file_tot_sample_duration += int(tfhd.get("SampleDuration")) * int(s_count) / int(file_timescale)
+						tmp_duration = int(tfhd.get("SampleDuration")) * int(s_count) / int(file_timescale)
+						file_tot_sample_duration += tmp_duration
+						file_fragment_duration += tmp_duration
 					elif trex_default_sample_duration:
-						file_tot_sample_duration += int(trex_default_sample_duration) * int(s_count) / int(file_timescale)
-				
+						tmp_duration = int(trex_default_sample_duration) * int(s_count) / int(file_timescale)
+						file_tot_sample_duration += tmp_duration
+						file_fragment_duration += tmp_duration
+						
 				file_trune_sample_duration_present.append(
 					sum(trun_trune_sample_duration_present)==len(trun_trune_sample_duration_present)
 					and len(trun_trune_sample_duration_present) > 0)
@@ -2320,6 +2331,8 @@ def analyse_stream(test_content, frame_rate_family, debug_folder):
 			
 			print('Chunks per fragment = moof=' + str(file_chunks_per_fragment) + ' mdat=' + str(
 				file_chunks_per_fragment_mdat) + ' (' + str(test_content.chunks_per_fragment[1].value) + ')')
+			print('Fragment duration = '+str(file_fragment_duration))
+			file_fragment_durations.append(round(file_fragment_duration, 2))
 	
 	print('Found '+str(file_total_fragments)+' fragment m4s files')
 	
@@ -2375,18 +2388,27 @@ def analyse_stream(test_content, frame_rate_family, debug_folder):
 	print("Total sample duration = " + str(file_tot_sample_duration))
 	print("MPD mediaPresentationDuration = " + str(mpd_media_presentation_duration))
 	
-	if file_frame_rate != '':
-		test_content.cmaf_fragment_duration[1] = \
-			round(float(eval(str(file_total_samples)+'/'+str(file_total_fragments)+'/'+str(file_frame_rate))), 2)
-		if test_content.cmaf_fragment_duration[0] == 0:
-			test_content.cmaf_fragment_duration[2] = TestResult.UNKNOWN
-		else:
-			test_content.cmaf_fragment_duration[2] = TestResult.PASS \
-				if (test_content.cmaf_fragment_duration[0] == test_content.cmaf_fragment_duration[1]) \
-				else TestResult.FAIL
-		print('Fragment duration = '+str(test_content.cmaf_fragment_duration[1])+' seconds')
-	else:
-		test_content.cmaf_fragment_duration[2] = TestResult.NOT_TESTABLE
+	m_fragment_duration = max(set(file_fragment_durations), key=file_fragment_durations.count)
+	unique_fragment_durations = list(set(file_fragment_durations))
+	if test_content.cmaf_fragment_duration[0] == 0:
+		test_content.cmaf_fragment_duration[2] = TestResult.UNKNOWN
+	elif len(unique_fragment_durations) < 3:
+		test_content.cmaf_fragment_duration[1] = m_fragment_duration
+		test_content.cmaf_fragment_duration[2] = TestResult.PASS \
+			if (test_content.cmaf_fragment_duration[0] == test_content.cmaf_fragment_duration[1]) \
+			else TestResult.FAIL
+		if len(unique_fragment_durations) > 1:
+			test_content.cmaf_fragment_duration[1] = file_fragment_durations
+			if file_fragment_durations[-2:][0] < file_fragment_durations[-2:][1]:
+				# Last fragment expected to be shortest
+				test_content.cmaf_fragment_duration[2] = TestResult.FAIL
+				test_content.cmaf_fragment_duration[1] = "Last fragment is not shortest:" + str(file_fragment_durations[-2:][0]) +' < ' + str(file_fragment_durations[-2:][1])
+	elif len(unique_fragment_durations) > 2:
+			# Only 1 or 2 different fragment lengths expected
+			test_content.cmaf_fragment_duration[2] = TestResult.FAIL
+			test_content.cmaf_fragment_duration[1] = "More than 2 different fragment durations: " + ','.join(map(str, unique_fragment_durations))
+		
+	print('Fragment duration = ' + str(test_content.cmaf_fragment_duration[1]) + ' seconds')
 	
 	# Check frame types (I/P/B) present in stream
 	j = 0
@@ -2415,8 +2437,8 @@ def analyse_stream(test_content, frame_rate_family, debug_folder):
 				elif stype == 1 or stype == 6:
 					file_stream_b_frames += 1
 				# Check frame types (I/P/B) present in first fragment if frame rate known
-				if file_frame_rate != '':
-					if j < (test_content.cmaf_fragment_duration[1]*file_frame_rate):
+				if file_frame_rate != '' and len(file_fragment_durations) > 1:
+					if j < (file_fragment_durations[0]*file_frame_rate):
 						if stype == 2 or stype == 7:
 							file_sample_i_frames += 1
 						elif stype == 0 or stype == 5:
@@ -2432,8 +2454,8 @@ def analyse_stream(test_content, frame_rate_family, debug_folder):
 				elif stype == 0:
 					file_stream_b_frames += 1
 				# Check frame types (I/P/B) present in first fragment if frame rate known
-				if file_frame_rate != '':
-					if j < (test_content.cmaf_fragment_duration[1]*file_frame_rate):
+				if file_frame_rate != '' and len(file_fragment_durations) > 1:
+					if j < (file_fragment_durations[0]*file_frame_rate):
 						if stype == 2:
 							file_sample_i_frames += 1
 						elif stype == 1:
@@ -2445,7 +2467,7 @@ def analyse_stream(test_content, frame_rate_family, debug_folder):
 		print('Stream i-frames = '+str(file_stream_i_frames))
 		print('Stream p-frames = '+str(file_stream_p_frames))
 		print('Stream b-frames = '+str(file_stream_b_frames))
-		if file_frame_rate != '':
+		if file_frame_rate != '' and len(file_fragment_durations) > 1:
 			print('First fragment i-frames = '+str(file_sample_i_frames))
 			print('First fragment p-frames = '+str(file_sample_p_frames))
 			print('First fragment b-frames = '+str(file_sample_b_frames))
