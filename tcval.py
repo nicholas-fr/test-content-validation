@@ -683,6 +683,10 @@ def check_and_analyse_v(test_content, tc_vectors_folder, frame_rate_family, debu
 		ts_id_prefix = ''
 		if not tc.test_stream_id.startswith(TS_SPLICING_ID_MAIN) and not tc.test_stream_id.startswith(TS_SPLICING_ID_AD):
 			ts_id_prefix = TS_DEFAULT_PREFIX
+		else:
+			if not frame_rate_family == TS_LOCATION_FRAME_RATES_50:
+				# Skip non-25fps-family splicing content (WAVE splicing tests specifically use 25fps-family content)
+				return
 		test_stream_dir = Path(str(tc_vectors_folder)+sep+tc.file_brand[0]+TS_LOCATION_SETS_POST+sep
 							+ frame_rate_family+sep+ts_id_prefix+tc.test_stream_id+sep)
 		
