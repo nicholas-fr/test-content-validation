@@ -2274,7 +2274,7 @@ def analyse_stream(test_content, frame_rate_family, debug_folder):
 				(sum(file_tfhd_sample_duration_present) == len(file_tfhd_sample_duration_present)) \
 				or (sum(file_trun_sample_duration_present) == len(file_trun_sample_duration_present)) \
 				or (sum(file_trune_sample_duration_present) == len(file_trune_sample_duration_present)) \
-				or ((sum(file_tfhd_sample_duration_present) + sum(file_trun_sample_duration_present) + sum(file_trune_sample_duration_present)) \
+				or ((sum(file_tfhd_sample_duration_present) + sum(file_trun_sample_duration_present) + sum(file_trune_sample_duration_present))
 					== len(file_tfhd_sample_duration_present))
 			size_present = \
 				(sum(file_tfhd_sample_size_present) == len(file_tfhd_sample_size_present)) \
