@@ -194,6 +194,7 @@ class TestContent:
 			'mezzanine_format': self.mezzanine_format[0],
 			'mezzanine_label': self.mezzanine_label[0],
 			'conformance_test_result': '',  # Only applicable for results
+			'codec_name': self.codec_name[0],
 			'codec_profile': self.codec_profile[0],
 			'codec_level': self.codec_level[0],
 			'codec_tier': self.codec_tier[0],
@@ -230,6 +231,7 @@ class TestContent:
 			'mezzanine_format': self.mezzanine_format[1],
 			'mezzanine_label': self.mezzanine_label[1],
 			'conformance_test_result': '',  # Only applicable for results
+			'codec_name': self.codec_name[1],
 			'codec_profile': self.codec_profile[1],
 			'codec_level': self.codec_level[1],
 			'codec_tier': self.codec_tier[1],
@@ -266,6 +268,7 @@ class TestContent:
 			'mezzanine_format': self.mezzanine_format[2],
 			'mezzanine_label': self.mezzanine_label[2],
 			'conformance_test_result': self.conformance_test_result,
+			'codec_name': self.codec_name[2],
 			'codec_profile': self.codec_profile[2],
 			'codec_level': self.codec_level[2],
 			'codec_tier': self.codec_tier[2],
@@ -314,6 +317,11 @@ class TestContent:
 				'test_result': self.mezzanine_label[2].value
 				},
 			'conformance_test_result': self.conformance_test_result,
+			'codec_name': {
+				'expected': self.codec_name[0],
+				'detected': self.codec_name[1],
+				'test_result': self.codec_name[2].value
+			},
 			'codec_profile': {
 				'expected': self.codec_profile[0],
 				'detected': self.codec_profile[1],
