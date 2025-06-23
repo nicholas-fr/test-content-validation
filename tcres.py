@@ -227,12 +227,12 @@ for i,key in enumerate(pl):
 		ws.write(6, i + 1, pl[key]['conformance_test_result']['entries']['HEALTH']['verdict'],
 				 style_mapping.get(pl[key]['conformance_test_result']['entries']['HEALTH']['verdict'], style_default))
 	else:
+		ws.write(1, i + 1, "NOT TESTED", style_not_tested)
 		ws.write(2, i + 1, "NOT TESTED", style_not_tested)
 		ws.write(3, i + 1, "NOT TESTED", style_not_tested)
 		ws.write(4, i + 1, "NOT TESTED", style_not_tested)
 		ws.write(5, i + 1, "NOT TESTED", style_not_tested)
 		ws.write(6, i + 1, "NOT TESTED", style_not_tested)
-		ws.write(7, i + 1, "NOT TESTED", style_not_tested)
 	
 	for j, test in tests.items():
 		if pl[key][test]['test_result']:
@@ -336,12 +336,12 @@ for i,key in enumerate(pl):
 		ws.write(6, i + 1, pl[key]['conformance_test_result']['entries']['HEALTH']['verdict'],
 				 style_mapping.get(pl[key]['conformance_test_result']['entries']['HEALTH']['verdict'], style_default))
 	else:
+		ws.write(1, i + 1, "NOT TESTED", style_not_tested)
 		ws.write(2, i + 1, "NOT TESTED", style_not_tested)
 		ws.write(3, i + 1, "NOT TESTED", style_not_tested)
 		ws.write(4, i + 1, "NOT TESTED", style_not_tested)
 		ws.write(5, i + 1, "NOT TESTED", style_not_tested)
 		ws.write(6, i + 1, "NOT TESTED", style_not_tested)
-		ws.write(7, i + 1, "NOT TESTED", style_not_tested)
 	
 	for j, test in tests.items():
 		if pl[key][test]['test_result']:
