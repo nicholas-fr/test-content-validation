@@ -70,11 +70,12 @@ print("WAVE Test Stream Validation Results")
 print()
 #for i in range(1, pl_len+1):
 for i,key in enumerate(pl):
-	if ("missing" in key and args.missing) or "missing" not in key:
+	if (("missing" in key) and args.missing) or ("missing" not in key):
 		print ('## Stream '+str(key)+':  ', end='', flush=True)
 		cprint(pl[key]['file_brand']['expected']+' ', 'light_blue', end='', flush=True)
 		cprint(pl[key][test_info[0]], 'light_blue')
 		if "missing" in key:
+			print()
 			print()
 			continue
 		if args.jccp:
