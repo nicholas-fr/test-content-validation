@@ -679,14 +679,16 @@ def check_and_analyse_v(test_content, tc_vectors_folder, frame_rate_family, debu
 	if frame_rate_family not in [TS_LOCATION_FRAME_RATES_50, TS_LOCATION_FRAME_RATES_59_94, TS_LOCATION_FRAME_RATES_60]:
 		return
 	
+	skipped_tc_index = []
 	for tc in test_content:
 		ts_id_prefix = ''
 		if not tc.test_stream_id.startswith(TS_SPLICING_ID_MAIN) and not tc.test_stream_id.startswith(TS_SPLICING_ID_AD):
 			ts_id_prefix = TS_DEFAULT_PREFIX
 		else:
-			if not frame_rate_family == TS_LOCATION_FRAME_RATES_50:
+			if not (frame_rate_family == TS_LOCATION_FRAME_RATES_50):
 				# Skip non-25fps-family splicing content (WAVE splicing tests specifically use 25fps-family content)
-				return
+				skipped_tc_index.append(tc)
+				continue
 		test_stream_dir = Path(str(tc_vectors_folder)+sep+tc.file_brand[0]+TS_LOCATION_SETS_POST+sep
 							+ frame_rate_family+sep+ts_id_prefix+tc.test_stream_id+sep)
 		
@@ -774,6 +776,10 @@ def check_and_analyse_v(test_content, tc_vectors_folder, frame_rate_family, debu
 				elif v[2] == TestResult.NOT_APPLICABLE:
 					TS_RESULTS_TOTAL_NOT_APPLICABLE += 1
 	
+	# Remove skipped test cases (non-25fps-family splicing content)
+	for stc in skipped_tc_index:
+		test_content.remove(stc)
+		
 	# Save metadata to JSON file
 	tc_res_filepath = Path(str(tc_matrix.stem)+'_'+frame_rate_family+'_test_results_'+time_of_analysis+'.json')
 	tc_res_file = open(str(tc_res_filepath), "w", encoding='utf8')
