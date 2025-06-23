@@ -795,9 +795,9 @@ def check_and_analyse_v(test_content, tc_vectors_folder, frame_rate_family, debu
 	tc_nb_results = len(test_content)
 	for i, tc in enumerate(test_content):
 		if 'missing' in tc.test_file_path:
-			result_name = frame_rate_family+'_'+tc.test_stream_id+' (missing)'
+			result_name = tc.file_brand[0]+TS_LOCATION_SETS_POST+'_'+frame_rate_family+'_'+tc.test_stream_id+' (missing)'
 		else:
-			result_name = '_'.join(tc.test_file_path.split('\\')[-3:])
+			result_name = '_'.join(tc.test_file_path.split('\\')[-4:])
 		tc_res_json += "\""+result_name+"\":" + json.dumps(tc, indent=4, cls=TestContentFullEncoder, ensure_ascii=False)
 		if i<tc_nb_results-1:
 			tc_res_json += ",\n"
