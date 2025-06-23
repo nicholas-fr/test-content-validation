@@ -28,18 +28,28 @@ parser.add_argument(
 parser.add_argument(
 		'-j', '--jccp',
 		required=False,
-		type=bool,
-		help="Indicate whether to include JCCP DASH-IF validator failures in results summary.")
+		action="store_true",
+		help="Include JCCP DASH-IF validator failures in results summary.")
 parser.add_argument(
 		'-m', '--missing',
 		required=False,
-		type=bool,
-		help="Indicate whether to indicate missing streams in results summary.")
+		action="store_true",
+		help="Display \"missing\" streams in results summary.")
 parser.add_argument(
 		'-n', '--ntestable',
 		required=False,
-		type=bool,
-		help="Indicate whether to indicate not testable issues in results summary.")
+		action="store_true",
+		help="Display \"not testable\" issues in results summary.")
+parser.add_argument(
+		'-t', '--ntested',
+		required=False,
+		action="store_true",
+		help="Display \"not tested\" issues in results summary.")
+parser.add_argument(
+		'-x', '--xls',
+		required=False,
+		action="store_true",
+		help="Export results to XLS.")
 
 args = parser.parse_args()
 
@@ -113,7 +123,7 @@ for i,key in enumerate(pl):
 				else:
 					print('?')
 	
-			if pl[key][test]['test_result'] == 'NOT TESTED':
+			if pl[key][test]['test_result'] == 'NOT TESTED' and args.ntested:
 				print("Test: {0:40}".format(test), end='', flush=True)
 				cprint(pl[key][test]['test_result'],'light_blue', end='', flush=True)
 				cprint('\t', 'light_red', end='', flush=True)
@@ -131,6 +141,9 @@ for i,key in enumerate(pl):
 		print()
 		print()
 	
+if not args.xls:
+	sys.exit()
+
 ## Adapt to XLSX
 print("Saving as XLSX...", end='', flush=True)
 # XLSX format
